@@ -24,3 +24,5 @@ for(const p of ['douyin','xhs','sph','pyq']){const views=c.StudioDiscovery.list(
 c.location.hash='#discover?p=pyq';winHandlers.hashchange();click('select','view-pyq-'+encodeURIComponent('活动介绍')+'-0');assert.ok(app.innerHTML.includes('view-create'));click('view-create','view-pyq-'+encodeURIComponent('活动介绍')+'-0|1');winHandlers.hashchange();assert.ok(app.innerHTML.includes('生成创意结构图'));click('structure');assert.ok(els['#overlay'].innerHTML.includes('朋友圈正文'));
 const derived=c.StudioDiscovery.list(items,'pyq',[{id:'test-case',p:'pyq',theme:'活动介绍',name:'真实来源',what:'摘要',borrow:'参考方法',url:'https://example.com'}]);assert.ok(derived.some(v=>v.source?.id==='test-case'));
 console.log('PASS: discovery coverage, 3 points per view, Moments format, editor structure flow, case-derived provenance.');
+
+assert.ok(fs.readFileSync(path.join(root,"materials.html"),"utf8").includes("studio/platforms.css"));
