@@ -27,7 +27,7 @@
 草稿存储键为`tmb.studio2.workspace.v1`，素材台使用`tmb.studio2.legacy.*`，不覆盖同域名旧站数据，不自动迁移旧站数据。未知版本或损坏数据阻止写入。本地图片最长边压至1600像素；浏览器空间不足时明确报错，不清空已有存储。下载的草稿可重新导入。进入新编辑器时复制模板，后续两处独立编辑。
 
 ## 验证与发布
-运行`node tests/check.cjs`。本地预览`node tests/serve.cjs`，支持项目子路径。Pages沿用main分支根目录发布。当前授权缺少workflow权限，自动检查尚未启用，配置保存在`docs/check-workflow.example.yml`；本版已运行本地检查。
+运行`node tests/check.cjs`。本地预览`node tests/serve.cjs`，支持项目子路径。自动检查配置位于`.github/workflows/check.yml`，在推送main及提交PR时运行，工作流仅申请源码读取权限。Pages沿用main分支根目录发布，与自动检查独立运行；当前尚未设置检查失败阻止部署。
 
 流程：检查现状→本地验证→检查提交内容→提交与推送→等待Pages→正式环境复验。更新资源时同步HTML版本查询标识。回退用`git revert`对应提交后重新发布，不重写历史。
 

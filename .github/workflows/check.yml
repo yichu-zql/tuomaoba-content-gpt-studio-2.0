@@ -1,9 +1,10 @@
-# 待获得 GitHub workflow 权限后，放入 .github/workflows/check.yml 启用。
 name: Check content and application
 on:
   push:
     branches: [main]
   pull_request:
+permissions:
+  contents: read
 jobs:
   check:
     runs-on: ubuntu-latest
