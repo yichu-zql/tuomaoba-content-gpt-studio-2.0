@@ -1,0 +1,19 @@
+(function(g){'use strict';
+const VERSION=1,KEY='tmb.studio2.workspace.v1';
+const clone=x=>JSON.parse(JSON.stringify(x));
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>g.crypto?.randomUUID?.()||'draft-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+function angle(it){const s=[it.title,it.angle,it.formula].join(' ');if(/第一次|步骤|攻略|怎么用|不会用|清单/.test(s))return '流程攻略';if(/尴尬|推销|顾虑|社恐|疼|卫生|干净/.test(s))return '顾虑解答';if(/下班|午休|逛|顺路|打工|闺蜜|周末/.test(s))return '场景代入';if(/价格|优惠|福利|元|活动/.test(s))return '活动表达';return '信息说明';}
+function filter(items,f){return items.filter(i=>(!f.platform||i.p===f.platform)&&(!f.theme||i.type===f.theme)&&(!f.angle||angle(i)===f.angle)&&(!f.form||i.form===f.form)&&(!f.q||[i.title,i.angle,i.formula,i.form,i.type].join(' ').toLowerCase().includes(f.q.toLowerCase())));}
+function resolve(text,vars){return String(text??'').replace(/\{([^{}\n]+)\}/g,(m,k)=>vars[k]!==undefined&&String(vars[k]).trim()?String(vars[k]):'【待填：'+k+'】');}
+function createDraft(item,store,vars={}){const d=clone(item);d.id=uid();d.sourceId=item.id||null;d.sourceTitle=item.title;d.createdAt=d.updatedAt=new Date().toISOString();d.storeId=store.id;d.storeName=store.vars['店名'];d.vars={...store.vars,...vars};d.f=d.f||{};d.frames=(d.frames||[]).map(f=>({...f,assetId:null}));if(!d.frames.length)d.frames=[{role:'封面',main:d.cover?.main||d.title,sub:d.cover?.sub||'',note:'',layout:'',style:'',slot:''}];d.references=[];d.page=0;d.ratio=d.p==='xhs'?'3:4':d.p==='pyq'?'1:1':'9:16';d.textPosition='top';d.textScale=1;d.textColor='#20223c';d.background='#f1f0f4';return d;}
+function newWorkspace(){return {version:VERSION,drafts:[],assets:[],cases:[],settings:{platform:'douyin',storeId:'m01'}};}
+function load(storage){try{const raw=storage.getItem(KEY);if(!raw)return {data:newWorkspace()};const v=JSON.parse(raw);if(v.version!==VERSION||!Array.isArray(v.drafts)||!Array.isArray(v.assets)||!Array.isArray(v.cases))return {data:newWorkspace(),error:'本地数据版本无法读取。为保留原数据，已暂停保存；请导出原数据后处理。',blocked:true};return {data:v};}catch(e){return {data:newWorkspace(),error:'本地数据读取失败，已暂停写入以保留原数据。',blocked:true};}}
+function save(storage,data){try{storage.setItem(KEY,JSON.stringify(data));return {ok:true};}catch(e){return {ok:false,error:'保存失败：浏览器存储不可用或空间不足。请下载当前草稿，避免关闭后丢失。'};}}
+function upsert(data,d){d.updatedAt=new Date().toISOString();const i=data.drafts.findIndex(x=>x.id===d.id);if(i<0)data.drafts.unshift(clone(d));else data.drafts[i]=clone(d);}
+const labels={post:'发布文案',body:'正文',title:'标题',summary:'摘要',script:'分镜脚本',tags:'话题',pin:'置顶评论',pinA:'置顶评论 A',pinB:'置顶评论 B',replies:'评论回复',forward:'转发配文',mount:'挂载说明',article:'公众号文章',v1:'配文版本 1',v2:'配文版本 2',v3:'配文版本 3',pics:'配图说明',timing:'发布时间'};
+function textExport(d){const r=s=>resolve(s,d.vars);return [r(d.title),d.storeName,'平台：'+d.p,'来源模板：'+(d.sourceId||'空白创意'),'\n'+Object.entries(d.f).map(([k,v])=>(labels[k]||k)+'\n'+r(Array.isArray(v)?v.map(row=>Array.isArray(row)?row.join(' | '):row).join('\n'):v)).join('\n\n'),'\n画面说明\n'+d.frames.map((f,i)=>`${i+1}. ${r(f.role)}\n${r(f.main)}\n${r(f.sub)}\n${r(f.note)}\n构图：${r(f.layout)}\n风格：${r(f.style)}`).join('\n\n'),'\n参考：'+(d.references||[]).map(x=>x.name+' '+(x.url||'')).join('\n')].join('\n');}
+function scanDraft(d,rules){const text=textExport(d);const unresolved=[...new Set(text.match(/【待填：[^】]+】/g)||[])];return {unresolved,hits:rules?rules.scan(text,d.p).filter((x,i,a)=>a.findIndex(y=>y.w===x.w&&y.lv===x.lv)===i):[]};}
+function safeURL(s){try{const u=new URL(s);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}}
+g.StudioCore={VERSION,KEY,clone,esc,uid,angle,filter,resolve,createDraft,newWorkspace,load,save,upsert,labels,textExport,scanDraft,safeURL};
+})(typeof window!=='undefined'?window:globalThis);
