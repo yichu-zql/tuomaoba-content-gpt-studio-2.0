@@ -186,7 +186,7 @@
     else if (f.slot) h += '<div class="frph"><span>底图：' + esc(SLOTS[f.slot] ? SLOTS[f.slot].name : f.slot) + '<br>（上传本店照片后显示）</span></div>';
     else h += '<i class="deco d1"></i>';
     h += '<span class="frno">' + (idx + 1) + '/' + n + '</span>';
-    h += '<div class="cv-in"><h4>' + esc(resolve(main)) + '</h4>' + (sub ? '<span class="sub">' + esc(resolve(sub)) + '</span>' : '') + (!small && f.note ? '<p class="frnote">' + esc(resolve(f.note)) + '</p>' : '') + '</div>';
+    h += '<div class="cv-in"><h4>' + esc(resolve(main)) + '</h4>' + (sub ? '<span class="sub">' + esc(resolve(sub)) + '</span>' : '') + (!small && it.p!=='pyq' && f.note ? '<p class="frnote">' + esc(resolve(f.note)) + '</p>' : '') + '</div>';
     return h + '</div>';
   }
   function momentHTML(it, full) {
@@ -275,6 +275,12 @@
       '<div class="box"><h3>内容拆解与公式</h3><div class="formula">' + esc(b.content.formula) + '</div>' + steps + '<h4 class="sub-h">拍摄 / 排版要点</h4>' + li(b.content.tips) + '</div>' +
       '<div class="box"><h3>文案拆解与公式</h3><div class="formula">' + esc(b.copy.formula) + '</div><h4 class="sub-h">标题公式</h4>' + li(b.copy.titles) + '<h4 class="sub-h">开头钩子</h4>' + li(b.copy.hooks) + '<h4 class="sub-h">结尾引导</h4>' + li(b.copy.ctas) + '<h4 class="sub-h">不要这样写</h4>' + li(b.copy.avoid) + '</div>' +
       '</div><div class="col">' + pbMine(t.name) + '<div class="box"><h3>外部优秀案例拆解<span class="note">' + b.cases.length + ' 个</span></h3><div class="cases">' + cases + '</div></div></div></div></aside>';
+    var body=layer.querySelector('.pb-body'), boxes=Array.from(body.querySelectorAll('.box'));body.classList.add('pb-sections');body.innerHTML='';
+    var sections=[['特点','爆款内容特点',boxes[0]],['内容','内容拆解',boxes[1]],['文案','文案拆解',boxes[2]]];
+    sections.forEach(function(entry,n){entry[2].id='pb-section-'+n;body.appendChild(entry[2]);});
+    var casesSection=document.createElement('section');casesSection.id='pb-section-3';casesSection.className='pb-case-section';casesSection.appendChild(boxes[3]);casesSection.appendChild(boxes[4]);body.appendChild(casesSection);
+    var nav=document.createElement('nav');nav.className='pb-quicknav';nav.setAttribute('aria-label','公式详情导航');nav.innerHTML=['爆款内容特点','内容拆解','文案拆解','优秀案例'].map(function(t,n){return '<button type="button" class="btn" data-section="'+n+'">'+t+'</button>';}).join('');
+    layer.querySelector('.d-head').after(nav);nav.addEventListener('click',function(e){var b=e.target.closest('[data-section]');if(!b)return;nav.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-current',x===b?'true':'false');});var target=body.querySelector('#pb-section-'+b.dataset.section);body.scrollTo({top:body.scrollTop+target.getBoundingClientRect().top-body.getBoundingClientRect().top,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});target.setAttribute('tabindex','-1');target.focus({preventScroll:true});});
   }
   /* 团队自己拆过、归到这个主题的对标 */
   function pbMine(theme) {
@@ -293,7 +299,7 @@
       return '<section class="theme" id="theme-' + i + '" data-theme="' + esc(t.name) + '"><div class="th-head"><div><h2>' + t.name + '<span class="pill">' + ratioText(t) + '</span><span class="cnt">' + list.length + ' 条</span></h2><div class="say">' + say + '</div></div>' +
         '<div class="pager"><button class="btn sm ghost" type="button" data-copytheme="' + i + '">复制本主题</button><button class="arrow" type="button" data-pg="-1" aria-label="上一页">‹</button><span class="pg">1 / 1</span><button class="arrow" type="button" data-pg="1" aria-label="下一页">›</button></div></div>' +
         '<div class="track" tabindex="0" aria-label="' + t.name + ' 创意">' +
-        '<button class="card blank" type="button" data-new="' + i + '"><div class="thumb"><span class="plus">+</span><p>空白创意<br>写下想法和形式，生成这个主题的新创意</p></div><div class="meta"><div class="ttl">新建「' + t.name + '」创意</div><div class="row"><span class="pill">' + P.name + '</span></div><div class="row"><span class="pill">输入想法即可</span></div><div class="foot"><span>保存到这一栏最前面</span></div></div></button>' + pbCard(t, i) +
+        pbCard(t, i) + '<button class="card blank" type="button" data-new="' + i + '"><div class="thumb"><span class="plus">+</span><p>空白创意<br>写下想法和形式，生成这个主题的新创意</p></div><div class="meta"><div class="ttl">新建「' + t.name + '」创意</div><div class="row"><span class="pill">' + P.name + '</span></div><div class="row"><span class="pill">输入想法即可</span></div><div class="foot"><span>保存到这一栏最前面</span></div></div></button>' +
         list.map(cardHTML).join('') + '</div></section>';
     }).join('');
     document.querySelectorAll('.track').forEach(function (tr) { tr.addEventListener('scroll', function () { updatePager(tr); }, { passive: true }); updatePager(tr); });
@@ -391,7 +397,7 @@
       '<div class="d-head"><div><div class="pills" style="margin:0"><span class="pill"><i class="dot ' + it.p + '"></i>' + PLATS[it.p].name + ' · ' + esc(it.acct) + '</span><span class="pill">' + esc(it.type) + '</span><span class="pill">' + esc(it.form || '') + '</span><span class="pill ' + a[0] + '">' + a[1] + '</span><span class="pill">' + esc(resolve(it.when)) + ' · ' + esc(it.freq) + '</span>' + (it.custom ? '<span class="pill mine">' + (it.ai ? 'GPT 生成' : '快速生成') + '</span>' : '') + '</div>' +
       '<h2 id="dTitle">' + esc(resolve(it.title)) + '</h2><p class="angle">' + esc(resolve(it.angle)) + '</p>' + refLinks(it) + (it.fromBreak && brkOf(it.fromBreak) ? '<div class="pills"><span class="note">改写自对标：</span><button class="chip" type="button" data-brk="' + esc(it.fromBreak) + '">' + esc(brkName(brkOf(it.fromBreak))) + '</button></div>' : '') + '</div><div class="acts">' + acts + '</div></div>' +
       '<div class="d-body"><div class="col">' +
-      (fr.length ? '<div class="box"><h3>画面 · ' + fr.length + ' 张<span class="note">' + esc(fr[cur].role) + '</span></h3><div class="frview ' + frameRatio(it) + '"><button class="frnav" type="button" data-frame="' + ((cur - 1 + fr.length) % fr.length) + '" aria-label="上一张">‹</button><div class="frmain">' + frameHTML(it, fr[cur], cur) + '</div><button class="frnav" type="button" data-frame="' + ((cur + 1) % fr.length) + '" aria-label="下一张">›</button></div>' +
+      (it.p==='pyq'?'<div class="box moments-preview"><h3>朋友圈发布预览<span class="note">配文在上，图片 / 分享卡片在下</span></h3>'+momentHTML(it,true)+'</div>':fr.length ? '<div class="box"><h3>画面 · ' + fr.length + ' 张<span class="note">' + esc(fr[cur].role) + '</span></h3><div class="frview ' + frameRatio(it) + '"><button class="frnav" type="button" data-frame="' + ((cur - 1 + fr.length) % fr.length) + '" aria-label="上一张">‹</button><div class="frmain">' + frameHTML(it, fr[cur], cur) + '</div><button class="frnav" type="button" data-frame="' + ((cur + 1) % fr.length) + '" aria-label="下一张">›</button></div>' +
         '<div class="frthumbs">' + fr.map(function (f, i) { return '<button type="button" class="frthumb' + (i === cur ? ' on' : '') + '" data-frame="' + i + '" aria-label="第 ' + (i + 1) + ' 张">' + frameHTML(it, f, i, true) + '</button>'; }).join('') + '</div></div>'
         : '<div class="box"><h3>画面预览<span class="note">上传门店图后自动换成本店照片</span></h3><div class="cover-wrap' + (video ? ' video' : '') + '">' + coverHTML(it, 'big') + '</div></div>') +
       (it.p === 'pyq' ? '' : '<div class="box"><h3>封面文字</h3>' + coverFields.map(function (f) { return fieldHTML(it, f); }).join('') + '</div>') +
