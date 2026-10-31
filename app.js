@@ -40,7 +40,7 @@
     cur: load('tmb.studio2.legacy.cur', 's1'),
     prices: Object.assign(defaults(VARS.price), load('tmb.studio2.legacy.prices', {})),
     breaks: load('tmb.studio2.legacy.breaks', []),
-    photos: {}, open: null, editing: {}, brk: null,
+    templateAssets: load('tmb.studio2.legacy.templateAssets', {}), photos: {}, open: null, editing: {}, brk: null,
     /* 只有在 claude.ai 里打开时才有 window.claude，GitHub Pages 上这些按钮不出现 */
     ai: !!window.TMB_GPT
   };
@@ -157,8 +157,8 @@
   }
 
   /* ---------- 图片与封面 ---------- */
-  function photo(slot) { var p = state.photos[state.cur] || {}; return p[slot] || null; }
-  function firstPhoto(it) { for (var i = 0; i < (it.slots || []).length; i++) { var p = photo(it.slots[i]); if (p) return p; } return null; }
+  function photo(slot,it) { var chosen=state.templateAssets[state.cur+':'+((it||state.open||{}).id||'')]?.[slot];if(chosen)return chosen.data;var p = state.photos[state.cur] || {}; return p[slot] || null; }
+  function firstPhoto(it) { var custom=state.templateAssets[state.cur+':'+it.id]?.__frame0;if(custom)return custom.data;for (var i = 0; i < (it.slots || []).length; i++) { var p = photo(it.slots[i],it); if (p) return p; } return null; }
   function refSrc(name) { return IMG_DIR + encodeURIComponent(name) + '.jpg'; }
   function coverHTML(it, mode) {
     if (it.p === 'pyq') return momentHTML(it, mode === 'big');
@@ -178,7 +178,7 @@
   /* 多张图：每张按平台比例渲染，底图优先用本店照片，其次参考图，最后是占位 */
   function frameRatio(it) { return it.p === 'xhs' ? 'r34' : it.p === 'pyq' ? 'r11' : it.acct === '公众号' ? 'r169' : 'r916'; }
   function frameHTML(it, f, idx, small) {
-    var n = (it.frames || []).length, img = f.slot ? photo(f.slot) : null, ref = !img && f.ref ? refSrc(f.ref) : null;
+    var n = (it.frames || []).length, img = photo('__frame'+idx,it)||(f.slot ? photo(f.slot,it) : null), ref = !img && f.ref ? refSrc(f.ref) : null;
     var main = idx === 0 ? val(it, 'coverMain') : f.main, sub = idx === 0 ? val(it, 'coverSub') : f.sub;
     var h = '<div class="cv fr ' + esc(it.cover.style) + ' ' + frameRatio(it) + (img ? ' has-img' : '') + (ref ? ' has-ref' : '') + '">';
     if (img) h += '<div class="bgimg" style="background-image:url(' + img + ')"></div>';
@@ -191,7 +191,7 @@
   }
   function momentHTML(it, full) {
     var who = it.acct === '老客' ? '老客' : resolve('{简称}') + ' 店主';
-    var pics = (it.slots || []).slice(0, full ? 9 : 3).map(function (s) { var p = photo(s); return p ? '<div style="background-image:url(' + p + ')"></div>' : '<div class="ph" title="' + esc(SLOTS[s].name) + '"></div>'; });
+    var pics = (it.slots || []).slice(0, full ? 9 : 3).map(function (s) { var p = photo(s,it); return p ? '<div style="background-image:url(' + p + ')"></div>' : '<div class="ph" title="' + esc(SLOTS[s].name) + '"></div>'; });
     if (!pics.length && it.refs && it.refs.length) pics = it.refs.slice(0, 1).map(function (r) { return '<div style="background-image:url(' + refSrc(r) + ');background-position:top"></div>'; });
     var pt = String(val(it, 'pics') || '');
     var mini = /卡片|视频号|邀请卡/.test(pt) ? '<div class="mini"><i></i>' + (/视频号/.test(pt) ? '视频号 · Ulike脱毛吧' : '小程序 · Ulike脱毛吧') + '</div>' : '';
@@ -361,9 +361,18 @@
     return h + '</div>';
   }
   function slotTile(s) {
-    var p = photo(s);
-    return '<label class="slot"><div class="img ' + (p ? '' : 'ph') + '"' + (p ? ' style="background-image:url(' + p + ')"' : '') + '>' + (p ? '<span class="tag">本店</span>' : '') + '<span class="up">' + (p ? '替换' : '上传') + '</span></div><div class="lb">' + SLOTS[s].name + '</div><div class="gd">' + SLOTS[s].guide + '</div><input type="file" accept="image/*" hidden data-slot="' + s + '"></label>';
+    var p=photo(s),chosen=state.templateAssets[state.cur+':'+(state.open?.id||'')]?.[s];
+    return '<div class="slot"><label><div class="img '+(p?'':'ph')+'"'+(p?' style="background-image:url('+p+')"':'')+'><span class="up">上传 / 替换</span></div><input type="file" accept="image/*" hidden data-slot="'+s+'"></label><div class="lb">'+esc(SLOTS[s].name)+'</div><div class="gd">'+esc(SLOTS[s].guide)+'</div>'+(state.open?'<button type="button" class="btn sm" data-library-slot="'+s+'">从素材库选择</button>':'<a class="btn sm" href="index.html#library?tab=assets">打开素材库</a>')+(chosen?'<p class="note">'+esc(chosen.source||'资料库素材')+' · '+esc(chosen.name)+'</p><button class="btn sm ghost" data-library-clear="'+s+'" type="button">取消素材库选择</button>':'')+'</div>';
   }
+  function slotName(slot){return SLOTS[slot]?.name||'当前画面';}
+  function libraryPicker(slot){
+    if(!state.open)return;var item=state.open,all=(window.TMB_REFERENCE_ASSETS?.assets||[]).map(function(a){return Object.assign({},a,{data:a.path,source:'小红书参考图'});});
+    try{var local=JSON.parse(localStorage.getItem('tmb.studio2.workspace.v1')||'{}');all=all.concat((local.assets||[]).map(function(a){return Object.assign({},a,{themes:a.themes||[],source:a.source||'浏览器本地素材'});}));}catch(e){}
+    var box=document.createElement('div');box.className='asset-picker-overlay';box.innerHTML='<section class="asset-picker" role="dialog" aria-modal="true" aria-label="从资料库素材库选择"><div class="row"><h2>从素材库选择</h2><button type="button" class="btn" data-picker-close>返回模板</button></div><p class="note">用于当前门店的当前模板：'+esc(slotName(slot))+'。参考图保留来源，不代表本店实拍。</p><label>素材范围<select data-picker-scope><option value="theme">当前主题：'+esc(item.type)+'</option><option value="all">全部素材</option><option value="local">浏览器本地素材</option></select></label><div data-picker-list></div></section>';document.body.appendChild(box);
+    function draw(mode){var list=all.filter(function(a){return mode==='all'||mode==='local'?mode==='all'||a.source!=='小红书参考图':a.themes.includes(item.type)||!a.themes.length;});box.querySelector('[data-picker-list]').innerHTML=list.length?'<div class="picker-grid">'+list.map(function(a){return '<article><img loading="lazy" src="'+esc(a.data)+'" alt="'+esc(a.name)+'"><b>'+esc(a.name)+'</b><p class="note">'+esc(a.author||a.source)+'</p><button class="btn" type="button" data-picker-use="'+esc(a.id)+'">用于此处</button></article>';}).join('')+'</div>':'<p class="note">暂无匹配素材，可切换全部素材，或返回上传；缺少的图片后续配置。</p>';}
+    draw('theme');box.addEventListener('change',function(e){if(e.target.matches('[data-picker-scope]'))draw(e.target.value);});box.addEventListener('click',function(e){if(e.target.closest('[data-picker-close]')||e.target===box){box.remove();return;}var btn=e.target.closest('[data-picker-use]');if(!btn)return;var asset=all.find(function(x){return x.id===btn.dataset.pickerUse;});if(!asset)return;var key=state.cur+':'+item.id,prior=JSON.stringify(state.templateAssets);state.templateAssets[key]=state.templateAssets[key]||{};state.templateAssets[key][slot]=asset;if(!save('tmb.studio2.legacy.templateAssets',state.templateAssets)){state.templateAssets=JSON.parse(prior);toast('保存失败，请检查浏览器存储空间。');return;}box.remove();renderDrawer();renderThemes();toast('已用于当前模板的'+slotName(slot)+'，并保留素材来源。');});
+  }
+  document.addEventListener('click',function(e){var b=e.target.closest('[data-library-slot],[data-library-clear]');if(!b)return;e.preventDefault();if(b.dataset.librarySlot)libraryPicker(b.dataset.librarySlot);else{var key=state.cur+':'+state.open.id;delete state.templateAssets[key]?.[b.dataset.libraryClear];save('tmb.studio2.legacy.templateAssets',state.templateAssets);renderDrawer();renderThemes();}});
   function refLinks(it) {
     var r = (it.basedOn || []).map(byId).filter(Boolean);
     return r.length ? '<div class="pills"><span class="note">参考：</span>' + r.map(function (x) { return '<button class="chip" type="button" data-open="' + esc(x.id) + '">' + esc(resolve(x.title)) + '</button>'; }).join('') + '</div>' : '';
@@ -398,7 +407,7 @@
       '<h2 id="dTitle">' + esc(resolve(it.title)) + '</h2><p class="angle">' + esc(resolve(it.angle)) + '</p>' + refLinks(it) + (it.fromBreak && brkOf(it.fromBreak) ? '<div class="pills"><span class="note">改写自对标：</span><button class="chip" type="button" data-brk="' + esc(it.fromBreak) + '">' + esc(brkName(brkOf(it.fromBreak))) + '</button></div>' : '') + '</div><div class="acts">' + acts + '</div></div>' +
       '<div class="d-body"><div class="col">' +
       (it.p==='pyq'?'<div class="box moments-preview"><h3>朋友圈发布预览<span class="note">配文在上，图片 / 分享卡片在下</span></h3>'+momentHTML(it,true)+'</div>':fr.length ? '<div class="box"><h3>画面 · ' + fr.length + ' 张<span class="note">' + esc(fr[cur].role) + '</span></h3><div class="frview ' + frameRatio(it) + '"><button class="frnav" type="button" data-frame="' + ((cur - 1 + fr.length) % fr.length) + '" aria-label="上一张">‹</button><div class="frmain">' + frameHTML(it, fr[cur], cur) + '</div><button class="frnav" type="button" data-frame="' + ((cur + 1) % fr.length) + '" aria-label="下一张">›</button></div>' +
-        '<div class="frthumbs">' + fr.map(function (f, i) { return '<button type="button" class="frthumb' + (i === cur ? ' on' : '') + '" data-frame="' + i + '" aria-label="第 ' + (i + 1) + ' 张">' + frameHTML(it, f, i, true) + '</button>'; }).join('') + '</div></div>'
+        '<button type="button" class="btn" data-library-slot="__frame' + cur + '">从素材库选择当前画面</button><div class="frthumbs">' + fr.map(function (f, i) { return '<button type="button" class="frthumb' + (i === cur ? ' on' : '') + '" data-frame="' + i + '" aria-label="第 ' + (i + 1) + ' 张">' + frameHTML(it, f, i, true) + '</button>'; }).join('') + '</div></div>'
         : '<div class="box"><h3>画面预览<span class="note">上传门店图后自动换成本店照片</span></h3><div class="cover-wrap' + (video ? ' video' : '') + '">' + coverHTML(it, 'big') + '</div></div>') +
       (it.p === 'pyq' ? '' : '<div class="box"><h3>封面文字</h3>' + coverFields.map(function (f) { return fieldHTML(it, f); }).join('') + '</div>') +
       ((it.slots || []).length ? '<div class="box"><h3>要用的门店图<span class="note">' + it.slots.length + ' 张，点图上传本店照片</span></h3><div class="slots">' + it.slots.map(slotTile).join('') + '</div></div>' : '') +
@@ -891,7 +900,7 @@
       compress(t.files[0], function (url) {
         state.photos[state.cur] = state.photos[state.cur] || {}; state.photos[state.cur][slot] = url;
         var ok = save('tmb.studio2.legacy.photos.' + state.cur, state.photos[state.cur]);
-        toast(ok ? '已换成本店照片：' + SLOTS[slot].name : '浏览器空间不够，这张图只在本次打开时有效');
+        toast(ok ? '已换成本店照片：' + slotName(slot) : '浏览器空间不够，这张图只在本次打开时有效');
         if (state.open) renderDrawer(); else if (layer.querySelector('.modal')) photoModal();
         renderThemes();
       });
