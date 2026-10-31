@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');const root=path.resolve(__dirname,'..');
 const c={console,URL,URLSearchParams,crypto:require('node:crypto').webcrypto};c.window=c;vm.createContext(c);
-const files=['compliance.js','base.js','stores.js',...['douyin','xhs','sph','pyq'].map(p=>'content_'+p+'.js'),...['douyin','xhs','sph','pyq'].map(p=>'playbook_'+p+'.js'),'gen.js','breakdown.js','studio/core.js'];
+const files=['compliance.js','base.js','stores.js',...['douyin','xhs','sph','pyq'].map(p=>'content_'+p+'.js'),...['douyin','xhs','sph','pyq'].map(p=>'playbook_'+p+'.js'),'gen.js','breakdown.js','studio/core.js','studio/discovery.js'];
 files.forEach(f=>vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),c,{filename:f}));
 const C=c.StudioCore,items=c.TMB_ITEMS;assert.equal(items.length,153);assert.equal(new Set(items.map(x=>x.id)).size,153);assert.equal(c.TMB_STORES.length,78);
 const before=JSON.stringify(items);let frames=0;
@@ -13,9 +13,14 @@ for(const f of ['index.html','materials.html']){const h=fs.readFileSync(path.joi
 for(const f of ['app.js','gpt.js','studio/app.js','studio/bridge.js'])new vm.Script(fs.readFileSync(path.join(root,f),'utf8'),{filename:f});
 const docHandlers={},winHandlers={},els={};const element=()=>({innerHTML:'',textContent:'',classList:{add(){},remove(){}},focus(){},querySelectorAll:()=>[],parentElement:{innerHTML:''}});const app=element();els['#app']=app;els['#toast']=element();els['#overlay']=element();
 c.document={querySelector:s=>els[s]||(els[s]=element()),addEventListener:(n,f)=>docHandlers[n]=f,activeElement:null};c.addEventListener=(n,f)=>winHandlers[n]=f;c.localStorage={getItem:()=>null,setItem(){}};c.location={hash:'#discover',search:'',pathname:'/tuomaoba-content-gpt-studio-2.0/'};c.history={replaceState:(_,__,s)=>{if(s.startsWith('#'))c.location.hash=s;}};c.setTimeout=()=>1;c.clearTimeout=()=>{};c.scrollY=0;c.innerWidth=1200;c.scrollTo=()=>{};c.confirm=()=>true;
-vm.runInContext(fs.readFileSync(path.join(root,'studio/app.js'),'utf8'),c);assert.ok(app.innerHTML.includes('从熟悉的内容'));
+vm.runInContext(fs.readFileSync(path.join(root,'studio/app.js'),'utf8'),c);assert.ok(app.innerHTML.includes('同一个主题'));
 function click(action,value=''){docHandlers.click({preventDefault(){},target:{closest:s=>s==='[data-action]'?{dataset:{action,value}}:null}});}
 click('create',items[0].id);winHandlers.hashchange();assert.ok(app.innerHTML.includes('内容结构'));click('frame','1');assert.ok(app.innerHTML.includes('当前画面 · 2'));click('save');click('resources','cases');assert.ok(els['#overlay'].innerHTML.includes('现有案例'));click('close');
 for(const p of ['xhs','sph','pyq']){c.location.hash='#discover?p='+p;winHandlers.hashchange();click('create',items.find(i=>i.p===p).id);winHandlers.hashchange();assert.ok(app.innerHTML.includes('画面与关键帧'));}
 c.location.hash='#library';winHandlers.hashchange();for(const tab of ['ideas','assets','cases','rules']){click('library',tab);assert.ok(app.innerHTML.includes('资料库'));}
 console.log(`PASS: ${items.length} templates, ${frames} frames, 78 stores, 4 platforms, local generation, immutable sources, filtering, variables, storage failure/version handling, safe links, resource paths, editor/resource flows.`);
+
+for(const p of ['douyin','xhs','sph','pyq']){const views=c.StudioDiscovery.list(items,p);for(const t of new Set(items.filter(i=>i.p===p).map(i=>i.type))){assert.ok(views.filter(v=>v.type===t).length>=5);}for(const v of views){assert.ok(v.points.length>=3);for(let n=0;n<3;n++){const d=c.StudioDiscovery.build(v,n);assert.ok(d.frames.length);assert.ok(d.formula.includes(v.points[n]));if(p==='pyq'){assert.ok(d.f.post);assert.ok(!d.f.script);}}}}
+c.location.hash='#discover?p=pyq';winHandlers.hashchange();click('select','view-pyq-'+encodeURIComponent('活动介绍')+'-0');assert.ok(app.innerHTML.includes('view-create'));click('view-create','view-pyq-'+encodeURIComponent('活动介绍')+'-0|1');winHandlers.hashchange();assert.ok(app.innerHTML.includes('生成创意结构图'));click('structure');assert.ok(els['#overlay'].innerHTML.includes('朋友圈正文'));
+const derived=c.StudioDiscovery.list(items,'pyq',[{id:'test-case',p:'pyq',theme:'活动介绍',name:'真实来源',what:'摘要',borrow:'参考方法',url:'https://example.com'}]);assert.ok(derived.some(v=>v.source?.id==='test-case'));
+console.log('PASS: discovery coverage, 3 points per view, Moments format, editor structure flow, case-derived provenance.');
