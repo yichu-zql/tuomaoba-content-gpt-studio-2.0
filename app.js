@@ -408,7 +408,7 @@
       (fr.length ? '<div class="box"><h3>逐张说明<span class="note">点一张在左边查看</span></h3><ol class="frlist">' + fr.map(function (f, i) {
         var main = i === 0 ? val(it, 'coverMain') : f.main, sub = i === 0 ? val(it, 'coverSub') : f.sub;
         return '<li class="' + (i === cur ? 'on' : '') + '"><button type="button" class="frli-h" data-frame="' + i + '"><span class="frn">' + (i + 1) + '</span><b>' + esc(f.role) + '</b></button>' +
-          '<dl class="brief"><dt>公式</dt><dd><b>' + esc(f.formula) + '</b></dd><dt>排版</dt><dd>' + esc(f.layout) + '</dd><dt>风格</dt><dd>' + esc(f.style || '') + '</dd><dt>图上文字</dt><dd>' + renderTpl(main, it.p) + (sub ? '<br><span class="note">' + renderTpl(sub, it.p) + '</span>' : '') + (f.note ? '<br><span class="note">' + renderTpl(f.note, it.p) + '</span>' : '') + '</dd>' +
+          '<dl class="brief"><dt>公式</dt><dd><b>' + esc(f.formula) + '</b></dd><dt>排版</dt><dd>' + esc(it.p==='pyq'?'朋友圈配文在图片外，图片 / 分享卡片放在配文下方。':f.layout) + '</dd><dt>风格</dt><dd>' + esc(f.style || '') + '</dd><dt>图上文字</dt><dd>' + renderTpl(main, it.p) + (sub ? '<br><span class="note">' + renderTpl(sub, it.p) + '</span>' : '') + (it.p!=='pyq' && f.note ? '<br><span class="note">' + renderTpl(f.note, it.p) + '</span>' : '') + '</dd>' +
           (f.slot ? '<dt>底图</dt><dd>' + esc(SLOTS[f.slot] ? SLOTS[f.slot].name + '：' + SLOTS[f.slot].guide : f.slot) + '</dd>' : '') + (f.ref ? '<dt>参考</dt><dd><button class="chip" type="button" data-ref="' + esc(f.ref) + '">' + esc(REFS[f.ref] || f.ref) + '</button></dd>' : '') + '</dl></li>';
       }).join('') + '</ol></div>' : '') +
       abBox(it) +
