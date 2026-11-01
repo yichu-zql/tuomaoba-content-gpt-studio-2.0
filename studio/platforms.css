@@ -20,3 +20,6 @@
 
 /* 2.6.2: reserve the classic scrollbar width on short and long pages alike. */
 html{overflow-y:scroll;scrollbar-gutter:stable}
+
+/* Match the version badge across button and span hosts. */
+.top .brand .ver{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none;height:22px;min-height:22px;margin:0;padding:2px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:10px;font-weight:400;line-height:16px;letter-spacing:normal;color:#67677f;vertical-align:middle;align-self:center}
