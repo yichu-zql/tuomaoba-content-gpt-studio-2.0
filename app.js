@@ -33,7 +33,7 @@
   function defaults(list) { var o = {}; list.forEach(function (x) { o[x.k] = x.def; }); return o; }
 
   var state = {
-    tab: load('tmb.studio2.legacy.tab', 'douyin'), acct: null, period: null, q: '',
+    tab: load('tmb.shared.platform', load('tmb.studio2.legacy.tab', 'douyin')), acct: null, period: null, q: '',
     edits: load('tmb.studio2.legacy.edits', {}),
     custom: load('tmb.studio2.legacy.custom', []),
     stores: mergeStores(load('tmb.studio2.legacy.stores', null)),
@@ -158,8 +158,8 @@
   }
 
   /* ---------- 图片与封面 ---------- */
-  function photo(slot,it) { var chosen=state.templateAssets[state.cur+':'+((it||state.open||{}).id||'')]?.[slot];if(chosen)return chosen.data;var p = state.photos[state.cur] || {}; return p[slot] || null; }
-  function firstPhoto(it) { var custom=state.templateAssets[state.cur+':'+it.id]?.__frame0;if(custom)return custom.data;for (var i = 0; i < (it.slots || []).length; i++) { var p = photo(it.slots[i],it); if (p) return p; } return null; }
+  function photo(slot,it) { return null; }
+  function firstPhoto(it) { return null; }
   function refSrc(name) { return IMG_DIR + encodeURIComponent(name) + '.jpg'; }
   function coverHTML(it, mode) {
     if (it.p === 'pyq') return momentHTML(it, mode === 'big');
@@ -742,7 +742,7 @@
   document.addEventListener('click', function (e) {
     var t = e.target.closest('[data-frame],[data-pb],[data-pbcopy],[data-tab],[data-f],[data-open],[data-new],[data-close],[data-act],[data-ref],[data-jump],[data-pg],[data-copytheme],[data-g],[data-bp],[data-brk],[data-gbrk],[data-openbrk],#copyTab,#btnStore,#btnPhotos,#btnBackup,#btnBreak,#btnLog');
     if (!t) return;
-    if (t.dataset.tab) { state.tab = t.dataset.tab; state.acct = null; state.period = null; save('tmb.studio2.legacy.tab', state.tab); renderMain(); window.scrollTo(0, 0); return; }
+    if (t.dataset.tab) { state.tab = t.dataset.tab; save('tmb.shared.platform',state.tab); state.acct = null; state.period = null; save('tmb.studio2.legacy.tab', state.tab); renderMain(); window.scrollTo(0, 0); return; }
     if (t.dataset.f) { state[t.dataset.f] = t.dataset.v === '全部' ? null : t.dataset.v; renderFilters(); renderThemes(); return; }
     if (t.dataset.jump) { var sec = document.getElementById('theme-' + t.dataset.jump); if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (t.dataset.pg) { var tr = t.closest('.theme').querySelector('.track'); tr.scrollBy({ left: (+t.dataset.pg) * (tr.clientWidth + 1), behavior: 'smooth' }); return; }
