@@ -6,7 +6,7 @@ const loaded=C.load(localStorage),db=loaded.data;let blocked=loaded.blocked;
 const ITEMS=window.TMB_ITEMS||[],PLAT=window.TMB_PLATFORMS,STORES=window.TMB_STORES,PB=window.TMB_PLAYBOOK,SLOTS=window.TMB_SLOTS;
 const names={douyin:'抖音',xhs:'小红书',sph:'视频号',pyq:'朋友圈'};
 const tips={douyin:'动作或问题开场，用真实镜头承接；分开设计封面与前 3 秒。',xhs:'封面聚焦一个理由，组图补充细节，正文提供可保存的实用信息。',sph:'把场景、流程与行动入口讲清楚，保留适合转发的说明。',pyq:'主图集中表达，配文简短自然；门店与活动条件清楚。'};
-const state={view:'discover',platform:(()=>{try{return JSON.parse(localStorage.getItem('tmb.shared.platform'))}catch{return null}})()||db.settings.platform||'douyin',storeId:db.settings.storeId||STORES[0].id,theme:'',angle:'',form:'',q:'',page:0,selected:null,library:'ideas',draft:null,dirty:false,frame:0,fieldTab:'assets',returnHash:'#discover',scroll:0};
+const state={view:'discover',platform:(()=>{try{return JSON.parse(localStorage.getItem('tmb.shared.platform')||localStorage.getItem('tmb.studio2.legacy.tab')||'null')}catch{return null}})()||db.settings.platform||'douyin',storeId:db.settings.storeId||STORES[0].id,theme:'',angle:'',form:'',q:'',page:0,selected:null,library:'ideas',draft:null,dirty:false,frame:0,fieldTab:'assets',returnHash:'#discover',scroll:0};
 if(!PLAT[state.platform])state.platform='douyin';if(!STORES.some(s=>s.id===state.storeId))state.storeId=STORES[0].id;
 let lastFocus=null,toastTimer,headerObserver;const B=(label,a,v='',cl='')=>`<button type="button" class="${cl}" data-action="${a}" data-value="${E(v)}">${label}</button>`;
 const link=(label,url,cl='button')=>`<a class="${cl}" href="${E(url)}">${label}</a>`;
