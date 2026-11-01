@@ -105,6 +105,7 @@
     return it.f[k];
   }
   function edited(it, k) { var e = state.edits[it.id]; return !!(e && (k ? e[k] !== undefined : Object.keys(e).length)); }
+  document.addEventListener('click',function(e){if(!state.open)return;var b=e.target.closest('[data-act=edit],[data-act=reset],[data-act=resetall],[data-library-slot],[data-library-clear]');if(b){e.preventDefault();e.stopImmediatePropagation();location.href='index.html?template='+encodeURIComponent(state.open.id)+'&store='+encodeURIComponent(state.cur);}},true);
   function setVal(it, k, v) { state.edits[it.id] = state.edits[it.id] || {}; state.edits[it.id][k] = v; save('tmb.studio2.legacy.edits', state.edits); }
   function resetVal(it, k) { if (state.edits[it.id]) { delete state.edits[it.id][k]; if (!Object.keys(state.edits[it.id]).length) delete state.edits[it.id]; } save('tmb.studio2.legacy.edits', state.edits); }
   /* 生成用的“经验库”：全部模板 + 团队改过的版本 + 自己保存的创意 */
@@ -399,7 +400,7 @@
     var b = it.brief, video = it.p === 'douyin' || it.p === 'sph';
     var fr = it.frames || [], cur = Math.min(state.frame || 0, Math.max(0, fr.length - 1));
     var coverFields = [['coverMain', '封面大字', 'long'], ['coverSub', '封面小字', 'text']];
-    var acts = '<a class="btn accent" href="index.html?template=' + encodeURIComponent(it.id) + '&store=' + encodeURIComponent(state.cur) + '">在创作台编辑</a>' + '<button class="btn accent" type="button" data-act="copyall">复制全部文案</button>' +
+    var acts = '<a class="btn accent" href="index.html?template=' + encodeURIComponent(it.id) + '&store=' + encodeURIComponent(state.cur) + '">使用模板创作</a>' + '<button class="btn accent" type="button" data-act="copyall">复制全部文案</button>' +
       (it.custom ? '<button class="btn" type="button" data-act="regen">换一版</button><button class="btn ghost" type="button" data-act="delcustom">删除</button>' : '') +
       (edited(it) ? '<button class="btn" type="button" data-act="resetall">全部恢复默认</button>' : '') + '<button class="btn" type="button" data-close>关闭</button>';
     layer.innerHTML = '<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle">' +
