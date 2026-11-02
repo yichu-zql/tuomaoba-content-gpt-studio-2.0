@@ -3,11 +3,11 @@
   var BASE = window.TMB_ITEMS || [];
   var VARS = window.TMB_VARS, SLOTS = window.TMB_SLOTS, REFS = window.TMB_REFS, PLATS = window.TMB_PLATFORMS, GEN = window.TMB_GEN;
   var IMG_DIR = '素材/';
-  var ORDER = ['douyin', 'xhs', 'sph', 'pyq'];
+  var ORDER = ['xhs', 'pyq', 'douyin', 'sph'];
   var ACT = { A: ['a', 'A · 搜店名'], B: ['b', 'B · 点卡片'], C: ['c', 'C · 晒单邀友'] };
   var FIELDS = {
-    douyin: [['post', '发布文案', 'long'], ['script', '分镜脚本', 'table'], ['tags', '话题', 'text'], ['pinA', '置顶评论 A · 试导流', 'long', '可能限流，和 B 并行测试'], ['pinB', '置顶评论 B · 店名合集', 'long'], ['pin', '置顶评论', 'long'], ['replies', '评论区回复', 'long']],
-    xhs: [['title', '标题', 'long'], ['body', '正文', 'long'], ['tags', '话题标签', 'text'], ['pinA', '置顶评论 A · 试导流', 'long', '可能限流，和 B 并行测试'], ['pinB', '置顶评论 B · 店名合集', 'long'], ['pin', '置顶评论', 'long'], ['replies', '评论区话术 / 提示', 'long']],
+    douyin: [['post', '发布文案', 'long'], ['script', '分镜脚本', 'table'], ['tags', '话题', 'text'], ['pinA', '置顶评论 A · 发布前复核', 'long', '核实账号权限与内容真实性'], ['pinB', '置顶评论 B · 店名合集', 'long'], ['pin', '置顶评论', 'long'], ['replies', '评论区回复', 'long']],
+    xhs: [['title', '标题', 'long'], ['body', '正文', 'long'], ['tags', '话题标签', 'text'], ['pinA', '置顶评论 A · 试导流', 'long', '核实账号权限与内容真实性'], ['pinB', '置顶评论 B · 店名合集', 'long'], ['pin', '置顶评论', 'long'], ['replies', '评论区话术 / 提示', 'long']],
     sph: [['title', '文章标题', 'text'], ['summary', '文章摘要', 'long'], ['body', '文章正文结构', 'long'], ['post', '视频描述', 'long'], ['script', '分镜脚本', 'table'], ['forward', '转发用户的朋友圈文案', 'long'], ['mount', '挂载：小程序', 'text'], ['article', '挂载：公众号文章', 'text'], ['tags', '话题', 'text']],
     pyq: [['v1', '文案 1', 'long'], ['v2', '文案 2', 'long'], ['v3', '文案 3', 'long'], ['pics', '配图', 'long'], ['timing', '发布时间', 'text']]
   };
@@ -219,7 +219,7 @@
   function renderTabs() {
     document.getElementById('tabs').innerHTML = ORDER.map(function (k) {
       var n = items().filter(function (i) { return i.p === k; }).length;
-      return '<button class="tab" role="tab" type="button" data-tab="' + k + '" aria-selected="' + (state.tab === k) + '"><i class="dot ' + k + '"></i>' + PLATS[k].name + '<span class="n">' + n + '</span></button>';
+      return (k==='douyin'?'<span class="platform-divider" aria-hidden="true">|</span>':'') + '<button class="tab" role="tab" type="button" data-tab="' + k + '" aria-selected="' + (state.tab === k) + '"><i class="dot ' + k + '"></i>' + PLATS[k].name + '<span class="n">' + n + '</span></button>';
     }).join('');
   }
   function renderHead() {
@@ -393,8 +393,8 @@
     var a = ACT[it.act] || ACT.A, issues = scanItem(it);
     var ban = issues.filter(function (x) { return x.lv === 'ban'; }), cau = issues.filter(function (x) { return x.lv === 'cau'; });
     var chk = ban.length ? '<div class="chk bad"><b>有 ' + ban.length + ' 处禁用词，发布前必须改：' + uniq(ban.map(function (x) { return x.w; })).join('、') + '</b></div>'
-      : cau.length ? '<div class="chk warn"><b>合规检查：无禁用词</b>导流词“' + uniq(cau.map(function (x) { return x.w; })).join('、') + '”在抖音/小红书可能限流，只放在置顶评论 A 里测试。</div>'
-      : '<div class="chk ok"><b>合规检查：通过</b>没有功效宣称、绝对化用语和站外导流词。</div>';
+      : cau.length ? '<div class="chk warn"><b>合规检查：无禁用词</b>导流词“' + uniq(cau.map(function (x) { return x.w; })).join('、') + '”需要人工复核，不能通过评论、私信或谐音规避规则。</div>'
+      : '<div class="chk ok"><b>关键词检查：未命中</b>未命中当前词表，不代表发布审核通过；仍需检查图片、授权与事实依据。</div>';
     var missing = itemText(it).match(/【待填：[^】]+】/g);
     if (missing) chk += '<div class="chk warn"><b>门店信息待填：' + uniq(missing).join(' ').replace(/【待填：|】/g, ' ') + '</b>在“门店与价格”里填好后自动替换。</div>';
     var opt = optMissing(it);

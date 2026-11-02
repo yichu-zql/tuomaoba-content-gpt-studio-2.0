@@ -23,3 +23,5 @@ html{overflow-y:scroll;scrollbar-gutter:stable}
 
 /* Match the version badge across button and span hosts. */
 .top .brand .ver{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none;height:22px;min-height:22px;margin:0;padding:2px 8px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:10px;font-weight:400;line-height:16px;letter-spacing:normal;color:#67677f;vertical-align:middle;align-self:center}
+
+.platform-divider{align-self:center;color:#b7b6c3;margin:0 12px;flex:none}.platform-guidance{align-self:center;font-size:12px;color:#737584;white-space:nowrap;margin-left:8px}.policy-checks{display:grid;gap:12px;margin:16px 0}.policy-checks label{display:flex;align-items:flex-start;gap:10px}.policy-checks input{flex:none;width:16px!important;margin-top:4px}@media(max-width:700px){.platform-divider{margin:0 5px}.platform-guidance{font-size:11px}.platforms{overflow-x:auto}}
