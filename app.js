@@ -30,6 +30,8 @@
   }
   function load(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+  function syncSharedStore(){var id=load('tmb.studio2.legacy.cur',null);if(id&&id!==state.cur&&state.stores.some(function(s){return s.id===id;})){state.cur=id;renderAll();renderStoreSel();}}
+  window.addEventListener('pageshow',syncSharedStore);window.addEventListener('storage',function(e){if(e.key==='tmb.studio2.legacy.cur')syncSharedStore();});
   function defaults(list) { var o = {}; list.forEach(function (x) { o[x.k] = x.def; }); return o; }
 
   var state = {
