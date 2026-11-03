@@ -56,6 +56,7 @@
   function allVars() { var v = Object.assign({}, state.prices, store().vars); if (!v['门店数']) v['门店数'] = String(state.stores.length); return v; }
   var LABELS = {}; VARS.store.concat(VARS.price).forEach(function (x) { LABELS[x.k] = x.label; });
 
+  function safeRefURL(s) { try { var u = new URL(String(s || ''), location.href); return /^https?:$/.test(u.protocol) && !u.username && !u.password ? u.href : ''; } catch (e) { return ''; } }
   /* ---------- 文本与合规 ---------- */
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   /* 选填的门店信息（楼层入口、营业时间、周边、商圈）没填时：只剩标签的那一段（用“｜”分隔）或那一行直接去掉，句子里的直接省略，
@@ -378,7 +379,8 @@
   document.addEventListener('click',function(e){var b=e.target.closest('[data-library-slot],[data-library-clear]');if(!b)return;e.preventDefault();if(b.dataset.librarySlot)libraryPicker(b.dataset.librarySlot);else{var key=state.cur+':'+state.open.id;delete state.templateAssets[key]?.[b.dataset.libraryClear];save('tmb.studio2.legacy.templateAssets',state.templateAssets);renderDrawer();renderThemes();}});
   function refLinks(it) {
     var r = (it.basedOn || []).map(byId).filter(Boolean);
-    return r.length ? '<div class="pills"><span class="note">参考：</span>' + r.map(function (x) { return '<button class="chip" type="button" data-open="' + esc(x.id) + '">' + esc(resolve(x.title)) + '</button>'; }).join('') + '</div>' : '';
+    var cases = (it.caseReferences || []).map(function (x) { return { name: x.name, url: safeRefURL(x.url) }; }).filter(function (x) { return x.url; });
+    return (r.length ? '<div class="pills"><span class="note">创意模板参考：</span>' + r.map(function (x) { return '<button class="chip" type="button" data-open="' + esc(x.id) + '">' + esc(resolve(x.title)) + '</button>'; }).join('') + '</div>' : '') + (cases.length ? '<div class="pills"><span class="note">行业案例方法：</span>' + cases.map(function (x) { return '<a class="chip" target="_blank" rel="noopener noreferrer" href="' + esc(x.url) + '">' + esc(x.name) + '</a>'; }).join('') + '</div>' : '');
   }
   function abBox(it) {
     var ab = abOf(it); if (!ab || (!ab.hooks.length && !ab.test)) return '';
@@ -430,7 +432,7 @@
   }
 
   /* ---------- 空白创意：生成器 ---------- */
-  var gen = null, genChoices = [];
+  var gen = null, genChoices = [], genBatches = [], genBatch = 0;
   function acctsFor(p, theme) {
     var P = PLATS[p], t = P.themes.filter(function (x) { return x.name === theme; })[0] || {};
     var list = P.accts.filter(function (a) { return !t.ratio || t.ratio[a] === undefined || t.ratio[a] > 0; });
@@ -449,6 +451,7 @@
   };
   function genModal(p, themeIdx, prev) {
     var P = PLATS[p], theme = P.themes[themeIdx].name, accts = acctsFor(p, theme);
+    genBatches = []; genBatch = 0;
     gen = prev || { p: p, theme: theme, themeIdx: themeIdx, acct: accts[0], form: P.forms[0], idea: '', points: [], occasion: '常规', who: '' };
     var seg = function (key, list, multi) {
       return '<div class="seg" role="group">' + list.map(function (x) {
@@ -457,7 +460,7 @@
       }).join('') + '</div>';
     };
     layer.innerHTML = '<div class="scrim" data-close></div><div class="modal" role="dialog" aria-modal="true" aria-labelledby="gTitle" id="genForm">' +
-      '<h2 id="gTitle">新创意 · ' + P.name + ' · ' + theme + '</h2><p class="sub">写下你想要的创意和形式，生成一条完整的创意：标题、封面、' + (p === 'pyq' ? '朋友圈文案' : p === 'xhs' ? '正文' : '分镜和文案') + '、要拍的门店图和合规检查。生成后可以继续改。</p>' +
+      '<h2 id="gTitle">新创意 · ' + P.name + ' · ' + theme + '</h2><p class="sub">写下想法后，先生成 3 个不同创意点；可换两批，共 9 个方向。选中后生成标题、封面、' + (p === 'pyq' ? '朋友圈文案' : p === 'xhs' ? '正文' : '分镜和文案') + '，并继续编辑与检查。</p>' +
       '<div class="gen-grid">' +
       '<div class="gfield">你的创意想法<textarea id="gIdea" placeholder="' + esc(IDEA_HINT[theme] || '写一句你想要的创意') + '">' + esc(gen.idea) + '</textarea>' + genBrkChips(p, theme) + '</div>' +
       '<div class="gfield">账号' + seg('acct', accts) + '</div>' +
@@ -479,8 +482,30 @@
   function renderGenButtons() {
     var el = document.getElementById('gActs'); if (!el) return;
     var q = quota(), aiBtn = state.ai ? (q.left > 0 ? '<button class="btn" type="button" data-act="genai">用 GPT 生成（剩 ' + q.left + ' 次）</button>' : '<button class="btn" type="button" disabled>GPT 次数用完，' + hhmm(q.reset) + ' 恢复</button>') : '';
-    var books = window.TMB_PLAYBOOK || {}, caseCount = Object.keys(books).reduce(function (n, p) { return n + Object.keys(books[p] || {}).reduce(function (m, theme) { return m + ((books[p][theme].cases || []).length); }, 0); }, 0) + state.breaks.length;
+    var caseCount = totalCaseCount();
     el.innerHTML = '<div class="note">参考：创意库 ' + items().length + ' 条 · 行业案例 ' + caseCount + ' 条。参考库用于提炼内容原则与避重，结合你的输入生成新的切入角度。</div><button class="btn accent" type="button" data-act="genlocal">快速生成</button>' + aiBtn + '<button class="btn" type="button" data-close>取消</button>';
+  }
+  function totalCaseCount() {
+    var books = window.TMB_PLAYBOOK || {};
+    return Object.keys(books).reduce(function (n, p) { return n + Object.keys(books[p] || {}).reduce(function (m, theme) { return m + ((books[p][theme].cases || []).length); }, 0); }, 0) + (window.TMB_INDUSTRY_CASES || []).length + state.breaks.length;
+  }
+  function renderGenChoices() {
+    var status = document.getElementById('gStatus'), actions = document.getElementById('gActs');
+    if (!status || !actions || !genBatches[genBatch]) return;
+    var batch = genBatches[genBatch], caseCount = totalCaseCount();
+    status.innerHTML = '<div class="note">参考：创意库 ' + items().length + ' 条 · 行业案例 ' + caseCount + ' 条</div><b>第 ' + (genBatch + 1) + ' 批 · 方案 ' + (genBatch * 3 + 1) + '–' + (genBatch * 3 + 3) + ' / 9</b><div class="gen-choices">' + batch.map(function (c, n) { var check = c.generationCheck || {}, audit = (check.distinctFromReferences ? '差异检查通过' : '需复核相似表达') + ' · ' + (check.compliant ? '合规词检查通过' : '含风险词，需修改') + ' · ' + (check.complete ? '结构完整' : '内容待补充'); return '<div class="box"><b>' + esc(c.title) + '</b><p>' + esc(c.brief.hook || c.angle) + '</p><small class="note">创意点：' + esc(c.direction.point) + '</small><small class="note">' + esc(audit) + '</small><button type="button" class="btn accent" data-act="genchoose" data-index="' + n + '">用这个方向继续编辑</button></div>'; }).join('') + '</div>';
+    document.querySelectorAll('#genForm .gen-grid input, #genForm .gen-grid textarea, #genForm .gen-grid select, #genForm .gen-grid [data-g]').forEach(function (x) { x.disabled = true; });
+    actions.innerHTML = (genBatch ? '<button class="btn" type="button" data-act="genbatch" data-index="' + (genBatch - 1) + '">上一批</button>' : '') + (genBatch < 2 ? '<button class="btn" type="button" data-act="genbatch" data-index="' + (genBatch + 1) + '">换一批 · 查看另外 3 个</button>' : '') + '<button class="btn" type="button" data-close>取消</button>';
+  }
+  function makeGenBatch(index) {
+    readGen();
+    var input = JSON.parse(JSON.stringify(gen)), dirs = GEN.directions(input).slice(index * 3, index * 3 + 3), history = [].concat.apply([], genBatches), batch = [];
+    dirs.forEach(function (direction, n) {
+      var draftInput = JSON.parse(JSON.stringify(input)); draftInput.direction = direction;
+      var refs = pool().concat(history, batch), item = GEN.smart(draftInput, index * 3 + n, refs);
+      item.direction = direction; item.input = JSON.parse(JSON.stringify(input)); item.seed = index * 3 + n; batch.push(item);
+    });
+    genBatch = index; genBatches[index] = batch; genChoices = batch; renderGenChoices();
   }
   function readGen() {
     gen.idea = (document.getElementById('gIdea') || {}).value || '';
@@ -817,7 +842,8 @@
       saveCustom(bi, bin); return;
     }
     if (act === 'abcopy') { copy(resolve(t.dataset.h), '已复制钩子'); return; }
-    if (act === 'genlocal') { readGen(); var inp = JSON.parse(JSON.stringify(gen)), ns = Math.floor(Math.random() * 1000); genChoices = [0,1,2].map(function (n) { var gi = GEN.smart(inp, ns + n * 8, pool()); gi.seed = ns + n * 8; gi.input = inp; return gi; }); var books = window.TMB_PLAYBOOK || {}, caseCount = Object.keys(books).reduce(function (n, p) { return n + Object.keys(books[p] || {}).reduce(function (m, theme) { return m + ((books[p][theme].cases || []).length); }, 0); }, 0) + state.breaks.length; var status = document.getElementById('gStatus'); if (status) status.innerHTML = '<div class="note">参考：创意库 ' + items().length + ' 条 · 行业案例 ' + caseCount + ' 条</div><b>选择一个新切入角度</b><div class="gen-choices">' + genChoices.map(function (c, n) { return '<div class="box"><b>方向 ' + (n + 1) + ' · ' + esc(c.title) + '</b><p>' + esc(c.brief.hook || c.angle) + '</p><small class="note">按所选平台与形式生成；参考库仅用于内容原则启发和相似度检查。</small><button type="button" class="btn accent" data-act="genchoose" data-index="' + n + '">用这个方向继续编辑</button></div>'; }).join('') + '</div>'; var actions = document.getElementById('gActs'); if (actions) actions.innerHTML = '<button class="btn" type="button" data-close>取消</button>'; return; }
+    if (act === 'genlocal') { makeGenBatch(0); return; }
+    if (act === 'genbatch') { var nextBatch = Number(t.dataset.index); if (!genBatches[nextBatch]) makeGenBatch(nextBatch); else { genBatch = nextBatch; genChoices = genBatches[nextBatch]; renderGenChoices(); } return; }
     if (act === 'genchoose') { var choice = genChoices[Number(t.dataset.index)]; if (!choice) return; T('quickGen', choice); saveCustom(choice, choice.input || gen); return; }
     if (act === 'genai') { runAI(); return; }
     var fe = t.closest('.field'), k = fe && fe.dataset.k;

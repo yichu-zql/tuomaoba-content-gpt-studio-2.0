@@ -285,8 +285,8 @@
   function inSeason(period, d) { var m = (d || new Date()).getMonth() + 1, r = SEASON[period]; return !r || r.indexOf(m) >= 0; }
   function rank(input, pool) {
     var ig = grams(input.idea), occ = OCC[input.occasion] || OCC['常规'];
-    pool = pool.filter(function(t) { return t.p === input.p && t.acct === input.acct && (t.acct === '公众号' ? !!t.f.body : t.p === 'sph' ? !!t.f.script : true); });
-    var same = pool.filter(function (t) { return t.type === input.theme; });
+    pool = pool.filter(function(t) { return t.p === input.p && t.acct === input.acct && (t.industryCase || (t.acct === '公众号' ? !!t.f.body : t.p === 'sph' ? !!t.f.script : true)); });
+    var same = pool.filter(function (t) { return t.type === input.theme || t.industryCase; });
     if (same.length < 2) same = pool.filter(function (t) { return t.p === input.p; });
     return same.map(function (t) {
       var s = overlap(ig, grams(docText(t))) * 1.5;
@@ -307,6 +307,38 @@
   }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function quoted(idea) { var m = String(idea || '').match(/[“"「『]([^”"」』]{2,34})[”"」』]/); return m ? m[1].trim() : ''; }
+  function industryCaseRefs(input) {
+    var books = window.TMB_PLAYBOOK || {}, out = [], seen = {};
+    Object.keys(books).forEach(function (p) { Object.keys(books[p] || {}).forEach(function (theme) {
+      (books[p][theme].cases || []).forEach(function (c, i) {
+        var key = c.url || c.name; if (!key || seen[key]) return; seen[key] = true;
+        var body = [c.what, c.why, c.borrow].filter(Boolean).join('；');
+        out.push({ id: 'industry-' + p + '-' + theme + '-' + i, p: input.p, acct: input.acct, type: theme, title: c.name, angle: c.borrow || c.why || c.what, form: c.type || '行业案例', cover: { main: c.name, sub: '' }, brief: { hook: c.what || '', msg: c.why || '' }, f: { post: body }, industryCase: true, source: { name: c.source || '', url: c.url || '', type: c.type || '' } });
+      });
+    }); });
+    (window.TMB_INDUSTRY_CASES || []).forEach(function (c, i) {
+      var key = c.url || c.id || c.name; if (!key || seen[key]) return; seen[key] = true;
+      var body = [c.what, c.borrow].filter(Boolean).join('；');
+      out.push({ id: c.id || 'industry-extra-' + i, p: input.p, acct: input.acct, type: '行业案例', title: c.name, angle: c.borrow || c.what, form: c.industry || c.type || '行业案例', cover: { main: c.name, sub: '' }, brief: { hook: c.what || '', msg: c.why || '' }, f: { post: body }, industryCase: true, source: { name: c.source || '行业案例', url: c.url || '', type: c.industry || c.type || '' } });
+    });
+    return out;
+  }
+  function creativeDirections(input) {
+    var topic = String(input.idea || '').trim().replace(/[“"「」『』]/g, '');
+    topic = topic ? clip(topic, 20) : input.theme;
+    var defs = [
+      ['流程实走', '记录从提出疑问到完成一次流程，步骤按门店实际情况填写。', '第一次了解「' + topic + '」，这次按实际流程走一遍。', '这次不先下结论，按实际流程走一遍，看到哪一步就说到哪一步。'],
+      ['单问单答', '选一个第一次接触时的具体问题，按问题、已核实回答、信息边界展开。', '关于「' + topic + '」，先回答第一次接触时最该问的一个问题。', '问题先摆出来，回答只留门店能确认的信息。'],
+      ['决策清单', '列出三项判断条件，每项配可查看的信息，让读者自己决定。', '想判断「' + topic + '」适不适合自己？先核对这三项。', '先看这三项条件，再决定要不要继续了解。'],
+      ['先讲边界', '说清需要先确认的适用条件，不给所有人都适用的结论。', '先不急着介绍「' + topic + '」，把需要提前确认的情况讲清楚。', '哪些情况要提前确认，我先把能核实的信息摆出来。'],
+      ['细节观察', '镜头只跟一个现场细节，说明它是什么、怎样核实，避免空泛评价。', '不讲大结论，只记录「' + topic + '」里一个现场看得到的细节。', '我只拍一个现场细节，顺手把它怎么确认说清楚。'],
+      ['三步拆解', '把主题拆成三个动作，每一步配实际画面与一句说明。', '把「' + topic + '」拆成三步，每一步都用实际画面对应。', '步骤分成三段，每段只讲一件事，照着实际情况来。'],
+      ['幕后任务', '记录门店准备的一件真实小事，保留过程细节，不模拟顾客评价。', '从门店准备「' + topic + '」的一件小事开始，记录前后过程。', '从店里开始准备时的一件小事拍起，不演顾客。'],
+      ['选择对照', '比较两个选择的条件和取舍，只用已核实信息，不替观众下结论。', '面对「' + topic + '」，把两个选择的条件摆出来再比较。', '把两个选择的条件放一起看，最后让大家自己判断。'],
+      ['现场验证', '提出一个能现场核对的问题，呈现核对过程与有限结论。', '用一个现场问题验证「' + topic + '」：提出、核对、再说明结论。', '挑一个能现场核对的问题，从提出到核对过程拍完整。']
+    ];
+    return defs.map(function (d, i) { return { id: i, label: d[0], point: d[1], hook: d[2], line: d[3] }; });
+  }
 
   function generateSmart(input, seed, pool) {
     seed = seed || 0;
@@ -315,11 +347,11 @@
     /* 想法里提到的卖点和活动，没选也自动带上 */
     if (!input.points || !input.points.length) input.points = Object.keys(POINT_KW).filter(function (k) { return kwHit(k, idea); }).slice(0, 3);
     if (!input.occasion || input.occasion === '常规') for (var i = 0; i < OCC_KW.length; i++) if (OCC_KW[i][0].test(idea)) { input.occasion = OCC_KW[i][1]; break; }
-    var ranked = rank(input, pool || []);
+    var caseRefs = industryCaseRefs(input), fullPool = (pool || []).concat(caseRefs), ranked = rank(input, fullPool);
     /* 不再克隆最相似创意：从平台适配的本地规则重新生成若干候选，选与参考库重合度最低的一条。 */
-    var refsPool = pool || [];
+    var refsPool = fullPool;
     var candidates = [];
-    for (var ci = 0; ci < 8; ci++) candidates.push(generateLocal(input, seed + ci));
+    for (var ci = 0; ci < 4; ci++) candidates.push(generateLocal(input, seed + ci));
     var best = candidates[0], bestScore = Infinity;
     candidates.forEach(function (candidate) {
       var text = docText(candidate), gramsCandidate = grams(text), score = 0;
@@ -336,7 +368,8 @@
     var it = rule, occ = OCC[input.occasion] || OCC['常规'];
     var sceneFor = function () { for (var k = 0; k < SCENES.length; k++) if (SCENES[k].re.test(idea)) return SCENES[k]; return DEFAULT_SCENE; };
     var q = quoted(idea);
-    var hook = q || '';
+    var direction = input.direction || null;
+    var hook = direction && direction.hook || q || '';
     var PBt = (window.TMB_PLAYBOOK || {})[input.p] && window.TMB_PLAYBOOK[input.p][input.theme];
     var pbTitle = '';
     if (!hook && PBt && PBt.gen && PBt.gen.hooks && PBt.gen.hooks.length) {
@@ -353,18 +386,19 @@
       hook = kp && ['活动介绍', '门店体验'].indexOf(input.theme) >= 0 ? pick(POINTS[kp].hooks, seed).replace(/\{scene\}/g, sc.name) : rule.title;
     }
     var occ0 = OCC[input.occasion] || OCC['常规'];
-    var pointLine = input.occasion !== '常规' && input.points[0] === '价格反差' ? occ0.line : rule.brief.msg.split('；')[0];
+    var pointLine = direction ? direction.line : input.occasion !== '常规' && input.points[0] === '价格反差' ? occ0.line : rule.brief.msg.split('；')[0];
 
     var originalForm = it.form;
     it.id = rule.id; it.custom = true; it.edited = false; delete it.ai; delete it.input; delete it.seed;
     it.acct = input.acct || it.acct; it.form = input.form || it.form; it.type = input.theme;
     it.act = rule.act; it.freq = '按需';
     if (input.occasion !== '常规') { it.period = occ.period; it.activity = occ.activity; it.when = occ.when; }
-    it.title = clip(pbTitle || hook, 26);
+    it.title = clip(direction ? direction.label + ' · ' + input.theme : pbTitle || hook, 26);
     it.formula = (PBt && PBt.content && PBt.content.formula) || '平台规则与用户输入组合';
-    it.angle = (idea ? '你的想法：' + clip(idea, 70) : '按“' + (input.points.join('、') || input.theme) + '”生成') + '。按平台表达规则重新组织' + (refs.length ? '；参考其“' + refs[0].form + '”呈现方式，不沿用原切口与表达' : '') + '。';
-    it.basedOn = refs.map(function (r) { return r.id; }).slice(0, 3);
-    it.cover.main = q && q.length <= 12 ? q.replace(/[，,]/, '\n') : (input.occasion !== '常规' || seed % 2 ? rule.cover.main : it.cover.main);
+    it.angle = (idea ? '你的想法：' + clip(idea, 70) : '按“' + (input.points.join('、') || input.theme) + '”生成') + '。创意点：' + (direction ? direction.point : '按平台表达规则重新组织') + (refs.length ? refs[0].industryCase ? '；参考行业案例的方法结构，不沿用原切口与表达' : '；参考其“' + refs[0].form + '”呈现方式，不沿用原切口与表达' : '') + '。';
+    it.basedOn = refs.filter(function (r) { return !r.industryCase; }).map(function (r) { return r.id; }).slice(0, 3);
+    it.caseReferences = refs.filter(function (r) { return r.industryCase && r.source.url; }).map(function (r) { return { name: r.source.name || r.title, url: r.source.url, type: r.source.type }; }).slice(0, 3);
+    it.cover.main = q && q.length <= 12 ? q.replace(/[，,]/, '\n') : direction ? clip(direction.label, 12) : (input.occasion !== '常规' || seed % 2 ? rule.cover.main : it.cover.main);
     it.cover.sub = rule.cover.sub;
     it.cover.style = ['red', 'navy', 'cream', 'mint', 'blue'][seed % 5];
     it.brief.who = input.who || it.brief.who;
@@ -373,7 +407,7 @@
     var occTxt = occ.line + (occ.dead ? '，' + occ.dead : '');
     /* 模板已经讲到这个卖点，就不再重复插入 */
     var topTxt = JSON.stringify(it.f) + it.title;
-    var needPoint = input.points.length && !(POINT_KW[input.points[0]] && kwHit(input.points[0], topTxt)) && topTxt.indexOf(pointLine.slice(0, 6)) < 0;
+    var needPoint = !!direction || input.points.length && !(POINT_KW[input.points[0]] && kwHit(input.points[0], topTxt)) && topTxt.indexOf(pointLine.slice(0, 6)) < 0;
     if (needPoint) it.brief.msg = pointLine + '；' + it.brief.msg;
     var f = it.f, p = input.p;
 
@@ -431,7 +465,12 @@
     } else if (PBt && PBt.frames && PBt.frames.plan) {
       it.frames = PBt.frames.plan.map(function (r, i) { return { role: r[0], main: i ? r[1] : it.cover.main, sub: i ? '' : it.cover.sub, note: '', layout: r[2], style: '', formula: r[1], slot: (it.slots || [])[i] || '', ref: '' }; });
     }
-    return fixItem(it);
+    it = fixItem(it);
+    var generatedText = [it.title, it.brief.hook, ...Object.keys(it.f).map(function (k) { return typeof it.f[k] === 'string' ? it.f[k] : JSON.stringify(it.f[k]); })].join(' '), generatedGrams = grams(generatedText), maxSimilarity = 0;
+    fullPool.forEach(function (ref) { if (ref.p === input.p) { var refGrams = grams(docText(ref)), size = Object.keys(generatedGrams).length || 1; maxSimilarity = Math.max(maxSimilarity, overlap(generatedGrams, refGrams) / size); } });
+    var prohibited = window.TMB_RULES.scan(generatedText, input.p).some(function (x) { return x.lv === 'ban'; });
+    it.generationCheck = { distinctFromReferences: maxSimilarity < 0.62, similarity: Math.round(maxSimilarity * 100), compliant: !prohibited, complete: !!(it.title && it.brief.hook && generatedText.length > 50) };
+    return it;
   }
 
   /* Claude 生成（仅在 claude.ai 打开时可用） */
@@ -446,7 +485,7 @@
   function generateAI(input, pool, onText) {
     return getSample().then(function (sample) {
       if (!sample) throw { code: 'unavailable' };
-      var refs = rank(input, pool || []).slice(0, 3).map(function (r) { return r.t; });
+      var refs = rank(input, (pool || []).concat(industryCaseRefs(input))).slice(0, 5).map(function (r) { return r.t; });
       var P = window.TMB_PLATFORMS[input.p];
       var prompt = [
         '你是 Ulike脱毛吧 的内容策划。Ulike脱毛吧是 Ulike（家用脱毛仪品牌）开在商场、园区、学校附近的无人值守自助脱毛店：独立隔间，用 Ulike 小程序扫码开机，设备有语音指引，合作商运营；用户在美团买新人体验后到店核销。',
@@ -455,7 +494,7 @@
         '主打卖点：' + (input.points.join('、') || '自定'),
         '档期/活动：' + input.occasion + '（' + (OCC[input.occasion] || OCC['常规']).line + '）',
         '规则：1) 价格、店名、位置等用变量，原样写花括号：{新人价}{全身新人价}{八次卡}{八次单次}{冬季20次}{冬季20次腿}{双人卡}{购机立减}{打卡季截止}{购机截止}{店名}{简称}{城市}{区域}{商场}{位置}{营业时间}{周边}{门店数}。2) 禁用：永久、根治、治疗、疗效、医用、无痛、不痛、100%、绝对、顶级、首选、全网最低、保证效果，以及“最”（“最近”除外）、“第一”（“第一次”除外）。体感说具体部位和真实感受（如“手臂基本就是热一下，腋下会有点刺”），不要统一的标准答案。3) 抖音和小红书的正文、标题、话题、分镜里不能出现：美团、微信、私信、二维码、链接（只有置顶评论A可写“某团”）；结尾引导“搜 Ulike脱毛吧＋商圈名”。4) 不贬低其他品牌，不拍身体特写，用户体验类用【写你自己的真实感受】留空。5) 要有活人感：像店员或店主本人在说话，口语、短句、具体细节，敢说小缺点；不要客服腔和官话（不要“放心～”“多数人反馈”“亲”“哦～”这类套话），评论区回复也一样；不冒充顾客写好评。6) 钩子具体、有场景，让人想停下来看、想评论、想转给朋友。',
-        '参考创意只用于提炼可迁移的内容原则（如信息顺序、镜头功能、受众顾虑），不得沿用其主题切口、标题、钩子、叙事顺序或句式。请结合用户输入，从不同切口重新构思；若与参考过于相似，主动换一个用户问题或表达形式。\n参考：\n' + refs.map(function (e, i) { return '【参考' + (i + 1) + '】' + e.title + '（' + e.acct + ' · ' + e.form + '）\n' + (i === 0 ? JSON.stringify(e.f).slice(0, 3200) : e.angle); }).join('\n\n'),
+        '创意库和行业案例只用于提炼可迁移的方法（如信息组织、镜头功能、受众顾虑），不得沿用参考案例的主题切口、标题、钩子、叙事顺序或句式。请结合用户输入重新设计创意点；若与参考过于相似，换一个用户问题或表现形式。不得编造案例事实。\n参考：\n' + refs.map(function (e, i) { return '【参考' + (i + 1) + '】' + e.title + '（' + e.acct + ' · ' + e.form + '）\n' + (i === 0 ? JSON.stringify(e.f).slice(0, 3200) : e.angle) + (e.industryCase && e.source.url ? '\n来源：' + e.source.url : ''); }).join('\n\n'),
         '只输出一个 JSON 对象，格式：{"title": "创意标题≤26字", "angle": "一句话创意说明", "cover": {"main": "封面大字≤12字，可用\\n换行", "sub": "封面小字≤16字"}, "brief": {"who": "给谁看", "hook": "钩子", "msg": "要说清楚的点", "must": "必须带", "shoot": "怎么拍", "kpi": "看什么数"}, ' + fieldSpec(input.p, input.acct) + ', "slots": ["S1".."S10" 里选 2-6 个门店图位：S1门头 S2导视 S3路线 S4店门口 S5隔间 S6设备上手 S7扫码开机 S8清洁 S9立牌 S10周边地标]}'
       ].join('\n\n');
       return sample.json(prompt, { onText: onText, cache: false, task: 'generate' }).then(function (j) {
@@ -498,5 +537,5 @@
   }
   function sceneOf(t, strict) { for (var i = 0; i < SCENES.length; i++) if (SCENES[i].re.test(t)) return SCENES[i].name; return strict ? null : DEFAULT_SCENE.name; }
 
-  window.TMB_GEN = { local: generateLocal, smart: generateSmart, ai: generateAI, sample: getSample, occasions: Object.keys(OCC), points: Object.keys(POINTS), occOf: occOf, sceneOf: sceneOf, fix: fixText, periodOf: periodOf };
+  window.TMB_GEN = { local: generateLocal, smart: generateSmart, ai: generateAI, sample: getSample, directions: creativeDirections, occasions: Object.keys(OCC), points: Object.keys(POINTS), occOf: occOf, sceneOf: sceneOf, fix: fixText, periodOf: periodOf };
 })();
