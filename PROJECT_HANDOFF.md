@@ -80,3 +80,8 @@
 
 资料库及编辑器的行业案例参考共用 `studio/app.js` 中的 `caseHTML` 表格行渲染。8列分别展示案例、行业目标、品牌账号（含粉丝）、互动数据、内容拆解、参考点、Ulike可学习点及核验依据。样式位于 `studio/style.css` 尾部；搜索作用域限定当前案例表，支持空结果反馈。保留原始数据、引用ID和本地存储结构。
 
+## 2.8.5 · 素材来源与案例筛选
+- `studio/case-filters.js` 负责组合筛选口径，默认verified；状态区分已核验适配、官方来源待适配、待复核与用户录入。
+- `studio/feishu-library.js` 验证本地飞书导入包（format=tmb-feishu-library，version=1，readAt、rootUrl、folders、assets、skipped、note）。图片仅允许PNG/JPEG/WebP数据URL，按来源token去重；导入失败恢复原工作区。目录和图片分别计数。
+- 私有飞书清单及素材不得提交GitHub。通过素材库的“导入飞书素材包”保存至当前浏览器，数据随既有工作区存储。网页无飞书令牌，无实时同步。已有素材按source隔离。
+- 本次目录接口遍历成功，但只返回文件夹，未返回图片；元信息排查缺drive:drive.metadata:readonly，新增授权发起被自动审批拒绝，等待用户明确许可。

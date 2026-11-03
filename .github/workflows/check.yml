@@ -16,3 +16,4 @@ jobs:
       - run: node case-library/validate.cjs
       - run: node tests/check.cjs
       - run: node tests/service.cjs
+      - run: node tests/libraries.cjs
