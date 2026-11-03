@@ -430,7 +430,7 @@
   }
 
   /* ---------- 空白创意：生成器 ---------- */
-  var gen = null;
+  var gen = null, genChoices = [];
   function acctsFor(p, theme) {
     var P = PLATS[p], t = P.themes.filter(function (x) { return x.name === theme; })[0] || {};
     var list = P.accts.filter(function (a) { return !t.ratio || t.ratio[a] === undefined || t.ratio[a] > 0; });
@@ -479,7 +479,8 @@
   function renderGenButtons() {
     var el = document.getElementById('gActs'); if (!el) return;
     var q = quota(), aiBtn = state.ai ? (q.left > 0 ? '<button class="btn" type="button" data-act="genai">用 GPT 生成（剩 ' + q.left + ' 次）</button>' : '<button class="btn" type="button" disabled>GPT 次数用完，' + hhmm(q.reset) + ' 恢复</button>') : '';
-    el.innerHTML = '<span class="note">从团队积累的 ' + items().length + ' 条创意、拆过的 ' + state.breaks.length + ' 条对标和本模块的爆款公式里找最接近的，按你的想法改写</span><button class="btn accent" type="button" data-act="genlocal">快速生成</button>' + aiBtn + '<button class="btn" type="button" data-close>取消</button>';
+    var books = window.TMB_PLAYBOOK || {}, caseCount = Object.keys(books).reduce(function (n, p) { return n + Object.keys(books[p] || {}).reduce(function (m, theme) { return m + ((books[p][theme].cases || []).length); }, 0); }, 0) + state.breaks.length;
+    el.innerHTML = '<div class="note">参考：创意库 ' + items().length + ' 条 · 行业案例 ' + caseCount + ' 条。参考库用于提炼内容原则与避重，结合你的输入生成新的切入角度。</div><button class="btn accent" type="button" data-act="genlocal">快速生成</button>' + aiBtn + '<button class="btn" type="button" data-close>取消</button>';
   }
   function readGen() {
     gen.idea = (document.getElementById('gIdea') || {}).value || '';
@@ -816,7 +817,8 @@
       saveCustom(bi, bin); return;
     }
     if (act === 'abcopy') { copy(resolve(t.dataset.h), '已复制钩子'); return; }
-    if (act === 'genlocal') { readGen(); var inp = JSON.parse(JSON.stringify(gen)); var ns = Math.floor(Math.random() * 3); var gi = GEN.smart(inp, ns, pool()); gi.seed = ns; T('quickGen', gi); saveCustom(gi, inp); return; }
+    if (act === 'genlocal') { readGen(); var inp = JSON.parse(JSON.stringify(gen)), ns = Math.floor(Math.random() * 1000); genChoices = [0,1,2].map(function (n) { var gi = GEN.smart(inp, ns + n * 8, pool()); gi.seed = ns + n * 8; gi.input = inp; return gi; }); var books = window.TMB_PLAYBOOK || {}, caseCount = Object.keys(books).reduce(function (n, p) { return n + Object.keys(books[p] || {}).reduce(function (m, theme) { return m + ((books[p][theme].cases || []).length); }, 0); }, 0) + state.breaks.length; var status = document.getElementById('gStatus'); if (status) status.innerHTML = '<div class="note">参考：创意库 ' + items().length + ' 条 · 行业案例 ' + caseCount + ' 条</div><b>选择一个新切入角度</b><div class="gen-choices">' + genChoices.map(function (c, n) { return '<div class="box"><b>方向 ' + (n + 1) + ' · ' + esc(c.title) + '</b><p>' + esc(c.brief.hook || c.angle) + '</p><small class="note">按所选平台与形式生成；参考库仅用于内容原则启发和相似度检查。</small><button type="button" class="btn accent" data-act="genchoose" data-index="' + n + '">用这个方向继续编辑</button></div>'; }).join('') + '</div>'; var actions = document.getElementById('gActs'); if (actions) actions.innerHTML = '<button class="btn" type="button" data-close>取消</button>'; return; }
+    if (act === 'genchoose') { var choice = genChoices[Number(t.dataset.index)]; if (!choice) return; T('quickGen', choice); saveCustom(choice, choice.input || gen); return; }
     if (act === 'genai') { runAI(); return; }
     var fe = t.closest('.field'), k = fe && fe.dataset.k;
     var fdef = it && k ? fieldsOf(it).concat([['coverMain', '', 'long'], ['coverSub', '', 'text']]).filter(function (f) { return f[0] === k; })[0] : null;

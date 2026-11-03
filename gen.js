@@ -245,7 +245,7 @@
     return item;
   }
 
-  /* ---------- 快速生成：从积累的创意里找最接近的几条，按你的想法改写 ---------- */
+  /* ---------- 快速生成：根据输入重新组稿，参考库仅用于启发与避重 ---------- */
   var POINT_KW = {
     '价格反差': /价格|便宜|划算|奶茶|省钱|性价比|一次不到|拆账|美容院|几百/g,
     '没人推销': /推销|尴尬|尬聊|社恐|无人|没人|一个人/g,
@@ -316,16 +316,27 @@
     if (!input.points || !input.points.length) input.points = Object.keys(POINT_KW).filter(function (k) { return kwHit(k, idea); }).slice(0, 3);
     if (!input.occasion || input.occasion === '常规') for (var i = 0; i < OCC_KW.length; i++) if (OCC_KW[i][0].test(idea)) { input.occasion = OCC_KW[i][1]; break; }
     var ranked = rank(input, pool || []);
-    var rule = generateLocal(input, seed);
+    /* 不再克隆最相似创意：从平台适配的本地规则重新生成若干候选，选与参考库重合度最低的一条。 */
+    var refsPool = pool || [];
+    var candidates = [];
+    for (var ci = 0; ci < 8; ci++) candidates.push(generateLocal(input, seed + ci));
+    var best = candidates[0], bestScore = Infinity;
+    candidates.forEach(function (candidate) {
+      var text = docText(candidate), gramsCandidate = grams(text), score = 0;
+      refsPool.forEach(function (ref) {
+        if (ref.p !== input.p) return;
+        var refGrams = grams(docText(ref)), total = Object.keys(gramsCandidate).length || 1;
+        score = Math.max(score, overlap(gramsCandidate, refGrams) / total);
+      });
+      if (score < bestScore) { best = candidate; bestScore = score; }
+    });
+    var rule = best;
     if (!ranked.length) return fixItem(rule);
-    var top = ranked[seed % Math.min(3, ranked.length)].t;
     var refs = ranked.slice(0, 3).map(function (r) { return r.t; });
-    var it = clone(top), occ = OCC[input.occasion] || OCC['常规'];
-    /* 想法里没提场景时，跟着骨架模板自己的场景走（模板讲午休，钩子就别写逛街） */
-    var topText = top.title + String(top.cover && top.cover.main || '') + String(top.f.post || top.f.body || top.f.v1 || '').slice(0, 80);
-    var sceneFor = function () { for (var k = 0; k < SCENES.length; k++) if (SCENES[k].re.test(idea)) return SCENES[k]; for (k = 0; k < 5; k++) if (SCENES[k].re.test(topText)) return SCENES[k]; return DEFAULT_SCENE; };
+    var it = rule, occ = OCC[input.occasion] || OCC['常规'];
+    var sceneFor = function () { for (var k = 0; k < SCENES.length; k++) if (SCENES[k].re.test(idea)) return SCENES[k]; return DEFAULT_SCENE; };
     var q = quoted(idea);
-    var hook = q || (idea && idea.length <= 16 && !/[，,。；]/.test(idea) ? idea : '');
+    var hook = q || '';
     var PBt = (window.TMB_PLAYBOOK || {})[input.p] && window.TMB_PLAYBOOK[input.p][input.theme];
     var pbTitle = '';
     if (!hook && PBt && PBt.gen && PBt.gen.hooks && PBt.gen.hooks.length) {
@@ -335,8 +346,8 @@
       if (PBt.gen.titles && PBt.gen.titles.length) pbTitle = pick(PBt.gen.titles, seed).replace(/\{scene\}/g, sc0.name);
     }
     if (!hook) {
-      /* 没有现成钩子：按参考模板讲的卖点来起标题，标题和正文说的是一件事 */
-      var tTxt = JSON.stringify(top.f) + top.title + top.angle;
+      /* 没有现成钩子：根据用户输入和本地规则起标题，不复用参考创意的表达。 */
+      var tTxt = idea;
       var kp = input.points.filter(function (k) { return kwHit(k, tTxt); })[0] || Object.keys(POINT_KW).sort(function (x, y) { return kwCount(y, tTxt) - kwCount(x, tTxt); }).filter(function (k) { return kwHit(k, tTxt); })[0];
       var sc = sceneFor();
       hook = kp && ['活动介绍', '门店体验'].indexOf(input.theme) >= 0 ? pick(POINTS[kp].hooks, seed).replace(/\{scene\}/g, sc.name) : rule.title;
@@ -344,28 +355,29 @@
     var occ0 = OCC[input.occasion] || OCC['常规'];
     var pointLine = input.occasion !== '常规' && input.points[0] === '价格反差' ? occ0.line : rule.brief.msg.split('；')[0];
 
+    var originalForm = it.form;
     it.id = rule.id; it.custom = true; it.edited = false; delete it.ai; delete it.input; delete it.seed;
     it.acct = input.acct || it.acct; it.form = input.form || it.form; it.type = input.theme;
     it.act = rule.act; it.freq = '按需';
     if (input.occasion !== '常规') { it.period = occ.period; it.activity = occ.activity; it.when = occ.when; }
     it.title = clip(pbTitle || hook, 26);
-    it.formula = (PBt && PBt.content && PBt.content.formula) || top.formula || '';
-    it.angle = (idea ? '你的想法：' + clip(idea, 70) : '按“' + (input.points.join('、') || input.theme) + '”生成') + '。主要参考《' + top.title + '》的结构和说法。';
-    it.basedOn = [top.id].concat(refs.filter(function (r) { return r.id !== top.id; }).map(function (r) { return r.id; })).slice(0, 3);
+    it.formula = (PBt && PBt.content && PBt.content.formula) || '平台规则与用户输入组合';
+    it.angle = (idea ? '你的想法：' + clip(idea, 70) : '按“' + (input.points.join('、') || input.theme) + '”生成') + '。按平台表达规则重新组织' + (refs.length ? '；参考其“' + refs[0].form + '”呈现方式，不沿用原切口与表达' : '') + '。';
+    it.basedOn = refs.map(function (r) { return r.id; }).slice(0, 3);
     it.cover.main = q && q.length <= 12 ? q.replace(/[，,]/, '\n') : (input.occasion !== '常规' || seed % 2 ? rule.cover.main : it.cover.main);
-    it.cover.sub = input.occasion !== '常规' && it.period !== top.period ? rule.cover.sub : it.cover.sub;
-    it.cover.style = ['red', 'navy', 'cream', 'mint', 'blue'][(['red', 'navy', 'cream', 'mint', 'blue'].indexOf(top.cover.style) + 1 + seed) % 5];
+    it.cover.sub = rule.cover.sub;
+    it.cover.style = ['red', 'navy', 'cream', 'mint', 'blue'][seed % 5];
     it.brief.who = input.who || it.brief.who;
     it.brief.hook = hook;
-    var needOcc = input.occasion !== '常规' && JSON.stringify(top.f).indexOf(occ.short.split(' ')[0]) < 0;
+    var needOcc = input.occasion !== '常规' && JSON.stringify(it.f).indexOf(occ.short.split(' ')[0]) < 0;
     var occTxt = occ.line + (occ.dead ? '，' + occ.dead : '');
     /* 模板已经讲到这个卖点，就不再重复插入 */
-    var topTxt = JSON.stringify(top.f) + top.title;
+    var topTxt = JSON.stringify(it.f) + it.title;
     var needPoint = input.points.length && !(POINT_KW[input.points[0]] && kwHit(input.points[0], topTxt)) && topTxt.indexOf(pointLine.slice(0, 6)) < 0;
     if (needPoint) it.brief.msg = pointLine + '；' + it.brief.msg;
     var f = it.f, p = input.p;
 
-    var formChanged = !!(f.script && top.form !== it.form);
+    var formChanged = !!(f.script && originalForm !== input.form);
     if (f.script) {
       if (formChanged) f.script = rule.f.script;
       else {
@@ -443,7 +455,7 @@
         '主打卖点：' + (input.points.join('、') || '自定'),
         '档期/活动：' + input.occasion + '（' + (OCC[input.occasion] || OCC['常规']).line + '）',
         '规则：1) 价格、店名、位置等用变量，原样写花括号：{新人价}{全身新人价}{八次卡}{八次单次}{冬季20次}{冬季20次腿}{双人卡}{购机立减}{打卡季截止}{购机截止}{店名}{简称}{城市}{区域}{商场}{位置}{营业时间}{周边}{门店数}。2) 禁用：永久、根治、治疗、疗效、医用、无痛、不痛、100%、绝对、顶级、首选、全网最低、保证效果，以及“最”（“最近”除外）、“第一”（“第一次”除外）。体感说具体部位和真实感受（如“手臂基本就是热一下，腋下会有点刺”），不要统一的标准答案。3) 抖音和小红书的正文、标题、话题、分镜里不能出现：美团、微信、私信、二维码、链接（只有置顶评论A可写“某团”）；结尾引导“搜 Ulike脱毛吧＋商圈名”。4) 不贬低其他品牌，不拍身体特写，用户体验类用【写你自己的真实感受】留空。5) 要有活人感：像店员或店主本人在说话，口语、短句、具体细节，敢说小缺点；不要客服腔和官话（不要“放心～”“多数人反馈”“亲”“哦～”这类套话），评论区回复也一样；不冒充顾客写好评。6) 钩子具体、有场景，让人想停下来看、想评论、想转给朋友。',
-        '团队已经积累的同类创意（学它们的结构、语气和细节，但不要照抄标题和钩子）：\n' + refs.map(function (e, i) { return '【参考' + (i + 1) + '】' + e.title + '（' + e.acct + ' · ' + e.form + '）\n' + (i === 0 ? JSON.stringify(e.f).slice(0, 3200) : e.angle); }).join('\n\n'),
+        '参考创意只用于提炼可迁移的内容原则（如信息顺序、镜头功能、受众顾虑），不得沿用其主题切口、标题、钩子、叙事顺序或句式。请结合用户输入，从不同切口重新构思；若与参考过于相似，主动换一个用户问题或表达形式。\n参考：\n' + refs.map(function (e, i) { return '【参考' + (i + 1) + '】' + e.title + '（' + e.acct + ' · ' + e.form + '）\n' + (i === 0 ? JSON.stringify(e.f).slice(0, 3200) : e.angle); }).join('\n\n'),
         '只输出一个 JSON 对象，格式：{"title": "创意标题≤26字", "angle": "一句话创意说明", "cover": {"main": "封面大字≤12字，可用\\n换行", "sub": "封面小字≤16字"}, "brief": {"who": "给谁看", "hook": "钩子", "msg": "要说清楚的点", "must": "必须带", "shoot": "怎么拍", "kpi": "看什么数"}, ' + fieldSpec(input.p, input.acct) + ', "slots": ["S1".."S10" 里选 2-6 个门店图位：S1门头 S2导视 S3路线 S4店门口 S5隔间 S6设备上手 S7扫码开机 S8清洁 S9立牌 S10周边地标]}'
       ].join('\n\n');
       return sample.json(prompt, { onText: onText, cache: false, task: 'generate' }).then(function (j) {
