@@ -389,6 +389,7 @@
     return (r.length ? '<div class="pills"><span class="note">创意模板参考：</span>' + r.map(function (x) { return '<button class="chip" type="button" data-open="' + esc(x.id) + '">' + esc(resolve(x.title)) + '</button>'; }).join('') + '</div>' : '') + (cases.length ? '<div class="pills"><span class="note">行业案例方法：</span>' + cases.map(function (x) { return '<a class="chip" target="_blank" rel="noopener noreferrer" href="' + esc(x.url) + '">' + esc(x.name) + '</a>'; }).join('') + '</div>' : '');
   }
   function abBox(it) {
+    if(it.execution)return '<div class="box"><h3>发布后怎么判断</h3><p>先记录'+esc(it.execution.metrics.join('、'))+'。在相近时段比较两个标题；样本不足时保留观察，不把单篇互动当作到店效果。</p></div>';
     var ab = abOf(it); if (!ab || (!ab.hooks.length && !ab.test)) return '';
     var L = ['A', 'B', 'C'];
     return '<div class="box"><h3>钩子备选 · A/B 测试<span class="note">同一条内容换个开头，看哪个更留人</span></h3>' +

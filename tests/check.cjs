@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');const root=path.resolve(__dirname,'..');
 const c={console,URL,URLSearchParams,crypto:require('node:crypto').webcrypto};c.window=c;vm.createContext(c);
-const files=['compliance.js','base.js','stores.js',...['douyin','xhs','sph','pyq'].map(p=>'content_'+p+'.js'),...['douyin','xhs','sph','pyq'].map(p=>'playbook_'+p+'.js'),'gen.js','case-library/catalog.js','service-creativity.js','breakdown.js','xhs-policy.js','studio/core.js','studio/discovery.js'];
+const files=['compliance.js','base.js','stores.js',...['douyin','xhs','sph','pyq'].map(p=>'content_'+p+'.js'),...['douyin','xhs','sph','pyq'].map(p=>'playbook_'+p+'.js'),'gen.js','case-library/catalog.js','service-copy.js','service-creativity.js','breakdown.js','xhs-policy.js','studio/core.js','studio/discovery.js'];
 files.forEach(f=>vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),c,{filename:f}));
 const C=c.StudioCore,items=c.TMB_ITEMS;assert.equal(items.length,168);assert.equal(new Set(items.map(x=>x.id)).size,168);assert.equal(c.TMB_STORES.length,78);
 const before=JSON.stringify(items);let frames=0;

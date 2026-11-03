@@ -1,6 +1,7 @@
 # 后续对话继承锚点
 
 ## 2.8.0案例接入
+- 最新发布2.8.2；service-copy.js为逐页发布文案，service-creativity.js为条件、检索和内部执行简报，两者分别维护。
 - 数据唯一编辑源：case-library/batches/YYYY-MM-DD.json；validate.cjs --build生成catalog.js与status.json。首批15篇，目标50篇，不混算旧案例。
 - service-creativity.js提供15个机制模板、条件筛选、3方向和最多4篇案例摘要；无GPT连接时为本地规则初稿，效果待测试。
 - 编辑器支持results可选字段，仅本地保存；现有存储v1兼容，不清空用户数据。
