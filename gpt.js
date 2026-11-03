@@ -10,7 +10,7 @@
     if(!body.data || typeof body.data!=='object' || Array.isArray(body.data))throw new Error('GPT 输出格式不正确');
     return body.data;
   }
-  window.TMB_GPT={sample:function(){return Promise.resolve({json:json});}};
+  window.TMB_GPT={isConfigured:function(){return !!(endpoint&&token);},sample:function(){return Promise.resolve({json:json});}};
   document.addEventListener('DOMContentLoaded',function(){
     var btn=document.createElement('button');btn.className='btn';btn.textContent='GPT 设置';btn.id='gptSettings';document.getElementById('btnBreak').before(btn);
     btn.addEventListener('click',function(){
@@ -18,7 +18,7 @@
       d.innerHTML='<h2>连接 GPT</h2><p>接口部署完成后填写。OpenAI 密钥只配置在服务端。</p><form method="dialog"><label>GPT 接口地址<input name="endpoint" type="url" required placeholder="https://你的接口域名/api/gpt" style="width:100%;margin:10px 0"></label><label>团队访问口令<input name="token" type="password" required autocomplete="off" style="width:100%;margin:10px 0"></label><p>口令仅在本次页面打开期间保留，刷新后需要重填。素材文字和参考模板会发送至已配置接口及 OpenAI。</p><p role="status"></p><button class="btn primary" type="submit">保存连接</button> <button class="btn" type="button" id="gptCancel">取消</button></form>';
       document.body.append(d);d.querySelector('[name=endpoint]').value=endpoint;d.querySelector('[name=token]').value=token;
       d.querySelector('#gptCancel').onclick=function(){d.close();};
-      d.querySelector('form').addEventListener('submit',function(e){e.preventDefault();var url=d.querySelector('[name=endpoint]').value.trim();try{var u=new URL(url);if(u.protocol!=='https:' || u.username || u.password || u.search || u.hash || u.pathname!=='/api/gpt')throw Error();}catch(err){d.querySelector('[role=status]').textContent='请填写 https://域名/api/gpt，不包含密钥或查询参数';return;}endpoint=url;token=d.querySelector('[name=token]').value;localStorage.setItem('tmb.studio2.gpt.endpoint',url);d.close();});
+      d.querySelector('form').addEventListener('submit',function(e){e.preventDefault();var url=d.querySelector('[name=endpoint]').value.trim();try{var u=new URL(url);if(u.protocol!=='https:' || u.username || u.password || u.search || u.hash || u.pathname!=='/api/gpt')throw Error();}catch(err){d.querySelector('[role=status]').textContent='请填写 https://域名/api/gpt，不包含密钥或查询参数';return;}endpoint=url;token=d.querySelector('[name=token]').value;localStorage.setItem('tmb.studio2.gpt.endpoint',url);document.dispatchEvent(new Event('tmb-gpt-configured'));d.close();});
       d.addEventListener('close',function(){d.remove();});d.showModal();
     });
   });

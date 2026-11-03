@@ -44,7 +44,7 @@
     breaks: load('tmb.studio2.legacy.breaks', []),
     templateAssets: load('tmb.studio2.legacy.templateAssets', {}), photos: {}, open: null, editing: {}, brk: null,
     /* 只有在 claude.ai 里打开时才有 window.claude，GitHub Pages 上这些按钮不出现 */
-    ai: !!window.TMB_GPT
+    ai: !!window.TMB_GPT?.isConfigured?.()
   };
   if (ORDER.indexOf(state.tab) < 0) state.tab = 'douyin';
   if (!state.stores.some(function (s) { return s.id === state.cur; })) state.cur = state.stores[0].id;
@@ -439,6 +439,7 @@
 
   /* ---------- 空白创意：生成器 ---------- */
   var gen = null, genChoices = [], genBatches = [], genBatch = 0;
+  document.addEventListener('tmb-gpt-configured',function(){state.ai=!!window.TMB_GPT?.isConfigured?.();if(document.getElementById('genForm')){if(genBatches.length)renderGenChoices();else renderGenButtons();}});
   function acctsFor(p, theme) {
     var P = PLATS[p], t = P.themes.filter(function (x) { return x.name === theme; })[0] || {};
     var list = P.accts.filter(function (a) { return !t.ratio || t.ratio[a] === undefined || t.ratio[a] > 0; });
@@ -504,9 +505,9 @@
     var status = document.getElementById('gStatus'), actions = document.getElementById('gActs');
     if (!status || !actions || !genBatches[genBatch]) return;
     var batch = genBatches[genBatch], caseCount = totalCaseCount();
-    status.innerHTML = '<div class="note">参考：创意库 ' + items().length + ' 条 · 行业案例 ' + caseCount + ' 条</div><b>第 ' + (genBatch + 1) + ' 批 · 方案 ' + (genBatch * 3 + 1) + '–' + (genBatch * 3 + 3) + (gen.goal?' / 3':' / 9') + '</b><div class="gen-choices">' + batch.map(function (c, n) { var check = c.generationCheck || {}, audit = (check.distinctFromReferences ? '差异检查通过' : '需复核相似表达') + ' · ' + (check.compliant ? '合规词检查通过' : '含风险词，需修改') + ' · ' + (check.complete ? '结构完整' : '内容待补充'); return '<div class="box"><b>' + esc(c.title) + '</b><p>' + esc(c.brief.hook || c.angle) + '</p><small class="note">创意点：' + esc(c.direction.point) + '</small><small class="note">' + esc(c.execution?'本地策划初稿 · '+c.execution.needs.length+' 项规则待确认 · 效果待测试':audit) + '</small>'+(c.execution?'<p class="note">需要：'+esc(c.execution.assets.join('、'))+'<br>成本项：'+esc(c.execution.costItems.join('、'))+'</p>':'')+'<button type="button" class="btn accent" data-act="genchoose" data-index="' + n + '">用这个方向继续编辑</button>'+(state.ai?'<button type="button" class="btn" data-act="genchosenai" data-index="'+n+'">用 GPT 展开这个方向</button>':'')+'</div>'; }).join('') + '</div>';
+    status.innerHTML = (gen.goal?'<div class="note">本次匹配 '+window.TMB_SERVICE.search(gen).length+' 篇已核验案例 · 本地规则初稿</div>':'<div class="note">参考：创意库 ' + items().length + ' 条 · 行业案例 ' + caseCount + ' 条</div>')+'<b>第 ' + (genBatch + 1) + ' 批 · 方案 ' + (genBatch * 3 + 1) + '–' + (genBatch * 3 + 3) + (gen.goal?' / 3':' / 9') + '</b><div class="gen-choices">' + batch.map(function (c, n) { var check = c.generationCheck || {}, audit = (check.distinctFromReferences ? '差异检查通过' : '需复核相似表达') + ' · ' + (check.compliant ? '合规词检查通过' : '含风险词，需修改') + ' · ' + (check.complete ? '结构完整' : '内容待补充'); return '<div class="box"><b>' + esc(c.title) + '</b><p>' + esc(c.brief.hook || c.angle) + '</p><small class="note">创意点：' + esc(c.direction.point) + '</small><small class="note">' + esc(c.execution?'本地策划初稿 · '+c.execution.needs.length+' 项规则待确认 · 效果待测试':audit) + '</small>'+(c.execution?'<p class="note">需要：'+esc(c.execution.assets.join('、'))+'<br>成本项：'+esc(c.execution.costItems.join('、'))+'</p>':'')+'<button type="button" class="btn accent" data-act="genchoose" data-index="' + n + '">用这个方向继续编辑</button>'+(state.ai?'<button type="button" class="btn" data-act="genchosenai" data-index="'+n+'">用 GPT 展开这个方向</button>':'')+'</div>'; }).join('') + '</div>';
     document.querySelectorAll('#genForm .gen-grid input, #genForm .gen-grid textarea, #genForm .gen-grid select, #genForm .gen-grid [data-g]').forEach(function (x) { x.disabled = true; });
-    actions.innerHTML = (genBatch ? '<button class="btn" type="button" data-act="genbatch" data-index="' + (genBatch - 1) + '">上一批</button>' : '') + (!gen.goal && genBatch < 2 ? '<button class="btn" type="button" data-act="genbatch" data-index="' + (genBatch + 1) + '">换一批 · 查看另外 3 个</button>' : '') + '<button class="btn" type="button" data-close>取消</button>';
+    actions.innerHTML = '<button class="btn" type="button" data-act="genedit">修改条件</button>'+(genBatch ? '<button class="btn" type="button" data-act="genbatch" data-index="' + (genBatch - 1) + '">上一批</button>' : '') + (!gen.goal && genBatch < 2 ? '<button class="btn" type="button" data-act="genbatch" data-index="' + (genBatch + 1) + '">换一批 · 查看另外 3 个</button>' : '') + '<button class="btn" type="button" data-close>取消</button>';
   }
   function makeGenBatch(index) {
     readGen();
@@ -861,6 +862,7 @@
     if (act === 'abcopy') { copy(resolve(t.dataset.h), '已复制钩子'); return; }
     if (act === 'genlocal') { makeGenBatch(0); return; }
     if (act === 'genbatch') { var nextBatch = Number(t.dataset.index); if (!genBatches[nextBatch]) makeGenBatch(nextBatch); else { genBatch = nextBatch; genChoices = genBatches[nextBatch]; renderGenChoices(); } return; }
+    if(act==='genedit'){readGen();genModal(gen.p,gen.themeIdx,gen);return;}
     if(act==='genchosenai'){var chosen=genChoices[Number(t.dataset.index)];if(!chosen)return;gen.direction=chosen.direction;runAI();return;}
     if (act === 'genchoose') { var choice = genChoices[Number(t.dataset.index)]; if (!choice) return; T('quickGen', choice); saveCustom(choice, choice.input || gen); return; }
     if (act === 'genai') { runAI(); return; }
