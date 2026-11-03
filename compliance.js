@@ -7,6 +7,8 @@
   var BAN_EXTRA = ['第一(?![次个周张单天步篇轮视遍回])', '最(?![近多后少初终开])', '(?<![妆])药(?!妆)'];
   var CAU_ALL = ['比基尼', '私处'];
   var CAU_SOCIAL = ['美团', '大众点评', '某团', '淘宝', '微信', 'vx', 'VX', '加V', '私信', '二维码', '链接'];
+  /* Ulike also sells home devices: never position the offline experience as a device purchase test, rebate, or purchase objection handler. */
+  var DEVICE_PURCHASE_RE = /购机|购机券|购机立减|家用.{0,2}(?:仪|脱毛仪)|体验后.{0,10}(?:买|购买|下单).{0,10}(?:脱毛仪|仪器)|(?:买|购买|下单).{0,10}(?:脱毛仪|脱毛仪器|家用仪)|(?:脱毛仪|脱毛仪器|家用仪).{0,10}(?:买|购买|下单)|先试.{0,15}再(?:决定)?(?:买|购买)|体验.{0,15}再(?:决定)?(?:买|购买)|先到店.{0,15}再(?:决定)?(?:买|购买)|(?:买|购买).{0,10}回家.{0,10}(?:吃灰|闲置)|(?:先别急着买|别急着买|先别.{0,4}下单)|(?:脱毛仪|仪器).{0,8}(?:会不会用|会用吗|值不值得买)|(?:会不会用|会用吗).{0,8}(?:脱毛仪|仪器)|立减\s*150\s*元/gi;
   function reEsc(x) { return x.replace(/[.*+?^${}()|[\]\\%]/g, '\\$&'); }
   var extra = BAN_EXTRA;
   try { new RegExp(extra[2]); } catch (e) { extra = extra.slice(0, 2).concat(['药(?!妆)']); } /* 老浏览器不支持后行断言 */
@@ -15,13 +17,16 @@
   function scan(text, p) {
     var out = [], m; text = String(text || ''); BAN_RE.lastIndex = 0;
     while ((m = BAN_RE.exec(text))) out.push({ w: m[0], lv: 'ban' });
+    DEVICE_PURCHASE_RE.lastIndex = 0;
+    while ((m = DEVICE_PURCHASE_RE.exec(text))) out.push({ w: m[0], lv: 'ban', code: 'device-purchase' });
     var cr = cauRe(p); while ((m = cr.exec(text))) out.push({ w: m[0], lv: 'cau' });
     return out;
   }
+  function hasRestrictedPurchase(text) { DEVICE_PURCHASE_RE.lastIndex = 0; return DEVICE_PURCHASE_RE.test(String(text || '')); }
   /* 自动改写：生成的内容先过一遍，再扫描 */
-  var FIX = [[/最好的?/g, '很适合的'], [/最便宜/g, '更划算'], [/最怕/g, '怕'], [/最常见/g, '常见'], [/最关心的?/g, '都会问的'], [/最低档/g, '低档'], [/最(?![近多后少初终开])/g, '很'], [/第一(?![次个周张单天步篇轮视遍回])/g, '头一'],
-    [/无痛|不痛|零痛感/g, '没我想的那么疼'], [/100%/g, '人人'], [/绝对/g, '真的'], [/首选/g, '我会选'], [/顶级|极致/g, '好用的'], [/全网最低/g, '划算'], [/永久/g, '长期'], [/保证效果|包满意/g, '看个人情况'], [/彻底告别/g, '省心多了'],
+  var FIX = [[/最好的?/g, '很适合的'], [/最便宜/g, '价格以当前公开价目为准'], [/最怕/g, '怕'], [/最常见/g, '常见'], [/最关心的?/g, '都会问的'], [/最低档/g, '低档'], [/最(?![近多后少初终开])/g, '很'], [/第一(?![次个周张单天步篇轮视遍回])/g, '头一'],
+    [/无痛|不痛|零痛感/g, '没我想的那么疼'], [/100%/g, '人人'], [/绝对/g, '真的'], [/首选/g, '我会选'], [/顶级|极致/g, '好用的'], [/全网最低/g, '价格以当前公开价目为准'], [/永久/g, '长期'], [/保证效果|包满意/g, '看个人情况'], [/彻底告别/g, '省心多了'],
     [/一次见效|立刻见效/g, '坚持几次后'], [/医院级|医疗级|医用/g, 'Ulike 的'], [/无副作用|零风险/g, '']];
   function fix(s) { s = String(s == null ? '' : s); FIX.forEach(function (f) { s = s.replace(f[0], f[1]); }); return s; }
-  window.TMB_RULES = { ban: BAN, banRe: BAN_RE, cauRe: cauRe, scan: scan, fix: fix };
+  window.TMB_RULES = { ban: BAN, banRe: BAN_RE, cauRe: cauRe, scan: scan, fix: fix, hasRestrictedPurchase: hasRestrictedPurchase };
 })();

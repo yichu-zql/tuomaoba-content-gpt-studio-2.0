@@ -50,7 +50,7 @@
   if (!state.stores.some(function (s) { return s.id === state.cur; })) state.cur = state.stores[0].id;
   state.stores.forEach(function (s) { state.photos[s.id] = load('tmb.studio2.legacy.photos.' + s.id, {}); });
 
-  function items() { return state.custom.concat(BASE); }
+  function items() { return state.custom.concat(BASE).filter(function (it) { return !window.TMB_RULES.hasRestrictedPurchase(JSON.stringify(it)); }); }
   function byId(id) { return items().filter(function (i) { return i.id === id; })[0]; }
   function store() { return state.stores.filter(function (s) { return s.id === state.cur; })[0]; }
   function allVars() { var v = Object.assign({}, state.prices, store().vars); if (!v['门店数']) v['门店数'] = String(state.stores.length); return v; }
@@ -254,7 +254,13 @@
       '<div class="row"><span class="pill ' + a[0] + '">' + a[1] + '</span>' + (bad ? '<span class="pill a">有禁用词</span>' : '') + '</div>' +
       '<div class="foot"><span>' + esc(resolve(it.when)) + '</span>' + (edited(it) ? '<span class="edited">已改</span>' : '') + '</div></div></button>';
   }
-  function pb(p, theme) { var P = window.TMB_PLAYBOOK || {}; return P[p] && P[p][theme] || null; }
+  function cleanPlaybook(value) {
+    if (typeof value === 'string') return RULES.hasRestrictedPurchase(value) ? '' : value;
+    if (Array.isArray(value)) return value.filter(function (x) { return !RULES.hasRestrictedPurchase(JSON.stringify(x)); }).map(cleanPlaybook);
+    if (value && typeof value === 'object') { var out = {}; Object.keys(value).forEach(function (k) { out[k] = cleanPlaybook(value[k]); }); return out; }
+    return value;
+  }
+  function pb(p, theme) { var P = window.TMB_PLAYBOOK || {}, value = P[p] && P[p][theme]; return value ? cleanPlaybook(value) : null; }
   function pbCard(t, i) {
     var b = pb(state.tab, t.name); if (!b) return '';
     return '<button class="card pbcard" type="button" data-pb="' + i + '"><div class="thumb"><div class="pbthumb"><span class="pbk">爆款公式</span><b>' + esc(t.name) + '</b>' +
@@ -444,7 +450,7 @@
     '门店体验': '比如：下班路上顺路去做，想拍第一视角，突出不用预约、没人推销',
     '活动介绍': '比如：讲冬季 20 次卡，用“一次不到 4 块”做钩子',
     '真实反馈和打卡': '比如：打卡第 2 周的用户晒卡片，语气轻松一点',
-    '项目背书': '比如：家用仪品牌开线下店，先试再买',
+    '项目背书': '比如：介绍品牌线下自助体验店，重点讲清服务流程和门店特点',
     '门店指引和点位': '比如：地铁口出来怎么走到店，15 秒路线',
     '科普答疑': '比如：第一次去的人最关心的 5 个问题',
     '福利与拉新': '比如：约闺蜜一起来，好友到店双方有礼'
@@ -499,7 +505,11 @@
   }
   function makeGenBatch(index) {
     readGen();
-    var input = JSON.parse(JSON.stringify(gen)), dirs = GEN.directions(input).slice(index * 3, index * 3 + 3), history = [].concat.apply([], genBatches), batch = [];
+    var input = JSON.parse(JSON.stringify(gen)), dirs, history = [].concat.apply([], genBatches), batch = [];
+    input.points = (input.points || []).filter(function (p) { return GEN.points.indexOf(p) >= 0; });
+    if (GEN.occasions.indexOf(input.occasion) < 0) input.occasion = '常规';
+    if (window.TMB_RULES.hasRestrictedPurchase(input.idea)) { var status = document.getElementById('gStatus'); if (status) status.textContent = '这条想法含不允许的仪器购买引导，请改为介绍线下自助服务、流程或已核实的服务价格。'; return; }
+    dirs = GEN.directions(input).slice(index * 3, index * 3 + 3);
     dirs.forEach(function (direction, n) {
       var draftInput = JSON.parse(JSON.stringify(input)); draftInput.direction = direction;
       var refs = pool().concat(history, batch), item = GEN.smart(draftInput, index * 3 + n, refs);
@@ -528,6 +538,7 @@
     var status = document.getElementById('gStatus');
     var btns = document.querySelectorAll('#gActs .btn'); btns.forEach(function (b) { b.disabled = true; });
     status.textContent = 'GPT 正在写…（通常 10–60 秒）';
+    if (window.TMB_RULES.hasRestrictedPurchase(input.idea)) { status.textContent = '这条想法含不允许的仪器购买引导，请改为介绍线下自助服务、流程或已核实的服务价格。'; renderGenButtons(); return; }
     GEN.ai(input, pool(), function (u) { status.textContent = 'GPT 正在写… 已写 ' + u.text.length + ' 字'; })
       .then(function (item) { useQuota(); T('aiGen', item); saveCustom(item, input); var q = quota(); toast('已生成。GPT 还剩 ' + q.left + ' 次，' + hhmm(q.reset) + ' 恢复'); })
       .catch(function (e) {
@@ -699,9 +710,9 @@
       if (types.indexOf(t) < 0 || n >= cands.length - (2 - picked.length)) { picked.push(c); types.push(t); }
     }
     /* 本主题公式里不够两条：从拆对标的改写库里补不同类型的钩子 */
-    /* 补的钩子也要和这条讲的事对得上：讲购机的补“想先试”，讲价格的补“怕贵” */
+    /* 补充钩子需和本条已核实的服务内容一致。 */
     var itx = it.title + JSON.stringify(it.brief || {});
-    var emo = /脱毛仪|购机|吃灰/.test(itx) ? 'gadget' : /疼|刺/.test(itx) ? 'pain' : /推销|社恐|尴尬|一个人/.test(itx) ? 'shy' : /干净|消毒|打扫/.test(itx) ? 'clean' : /闺蜜|好友|朋友/.test(itx) ? 'social' : /\{(新人价|八次卡|冬季20次|双人卡)\}|元/.test(itx) ? 'price' : '_';
+    var emo = /扫码|设备|语音指引|自助流程/.test(itx) ? 'service' : /疼|刺/.test(itx) ? 'pain' : /推销|社恐|尴尬|一个人/.test(itx) ? 'shy' : /干净|消毒|打扫/.test(itx) ? 'clean' : /闺蜜|好友|朋友/.test(itx) ? 'social' : /\{(新人价|八次卡|冬季20次|双人卡)\}|元/.test(itx) ? 'price' : '_';
     ['ask', 'contra', 'name', 'list', 'test'].forEach(function (k) {
       if (picked.length >= 2 || types.indexOf(k) >= 0) return;
       var c = ((BRK.rewrite[k][emo] || []).concat(BRK.rewrite[k]._ || [])).filter(function (x) { return [it.title].concat(picked).every(function (y) { return similar(y, x) < 0.4; }); })[hashId(it.id) % 3];
