@@ -13,4 +13,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - run: node case-library/validate.cjs
       - run: node tests/check.cjs
+      - run: node tests/service.cjs

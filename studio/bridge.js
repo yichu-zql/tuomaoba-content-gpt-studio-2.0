@@ -5,6 +5,6 @@ const style=document.createElement('style');style.textContent='.studio-nav{max-w
 const id=new URLSearchParams(location.search).get('open');if(id&&(window.TMB_ITEMS||[]).some(i=>i.id===id))location.hash=id;
 })();
 
-(()=>{const v=document.querySelector('#ver');if(v)v.textContent='v2.7.0';const p=document.createElement('link');p.rel='prefetch';p.href='index.html';document.head.append(p);})();
+(()=>{const v=document.querySelector('#ver');if(v)v.textContent='v2.8.0';const p=document.createElement('link');p.rel='prefetch';p.href='index.html';document.head.append(p);})();
 
 (()=>{const id=new URLSearchParams(location.search).get('tool');if(['gptSettings','btnBreak','btnStore','btnPhotos','btnBackup'].includes(id)){document.querySelector('#'+id)?.click();history.replaceState(null,'','materials.html'+location.hash);}})();

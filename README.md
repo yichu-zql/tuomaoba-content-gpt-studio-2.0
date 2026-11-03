@@ -2,6 +2,8 @@
 
 正式网址：https://yichu-zql.github.io/tuomaoba-content-gpt-studio-2.0/
 
+当前版本2.8.0：新增15套线下服务模板与15篇已核验案例，合计168套模板；50篇为扩充目标。案例表入口为 `case-library/review.html`，更新说明见 `case-library/README.md`。
+
 在现有素材台上增加“创意发现 → 统一内容编辑”，保留四平台153条模板、713张画面说明及现有案例、门店资料。内容基线来自 `yichu-zql/tuomaoba-content-gpt-studio` 的 `6cb1cc4a0950df807240bb34beab3b148cae5ae9`。旧站不受影响。
 
 ## 功能与限制

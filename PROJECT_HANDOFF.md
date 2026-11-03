@@ -1,5 +1,12 @@
 # 后续对话继承锚点
 
+## 2.8.0案例接入
+- 数据唯一编辑源：case-library/batches/YYYY-MM-DD.json；validate.cjs --build生成catalog.js与status.json。首批15篇，目标50篇，不混算旧案例。
+- service-creativity.js提供15个机制模板、条件筛选、3方向和最多4篇案例摘要；无GPT连接时为本地规则初稿，效果待测试。
+- 编辑器支持results可选字段，仅本地保存；现有存储v1兼容，不清空用户数据。
+- 每日09:30北京时间heartbeat已配置（应用任务ID 10）；首次无人值守执行待验证。运行要读取case-library/README.md。
+- 不能编造转发、核销、参与者结果、品牌资质；不生成图片。
+
 更新：2026-11-03。继续工作先读本文件，再按任务定位代码；不重复全量读取历史。
 
 ## 项目与授权
