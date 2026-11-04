@@ -8,7 +8,7 @@
   "automationEnabled": true,
   "scheduleTimezone": "Asia/Shanghai",
   "scheduleTime": "09:30",
-  "unattendedRunVerified": false,
+  "unattendedRunVerified": true,
   "goals": {
     "用户发帖": 4,
     "引流裂变": 3,
