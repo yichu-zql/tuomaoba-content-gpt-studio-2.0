@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
   "target": 50,
-  "verified": 15,
-  "remaining": 35,
-  "dataThrough": "2026-11-03",
+  "verified": 20,
+  "remaining": 30,
+  "dataThrough": "2026-11-04",
   "dailyTarget": 10,
   "automationEnabled": true,
   "scheduleTimezone": "Asia/Shanghai",
   "scheduleTime": "09:30",
   "unattendedRunVerified": false,
   "goals": {
-    "用户发帖": 1,
-    "引流裂变": 2,
+    "用户发帖": 4,
+    "引流裂变": 3,
     "项目背书": 2,
-    "首次体验": 7,
+    "首次体验": 8,
     "复访": 3
   },
   "limits": "互动达标不等于到店有效；未满足目标时不凑数、不冒充完成。"
