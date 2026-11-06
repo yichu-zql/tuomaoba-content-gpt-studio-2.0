@@ -469,7 +469,7 @@
       }).join('') + '</div>';
     };
     layer.innerHTML = '<div class="scrim" data-close></div><div class="modal" role="dialog" aria-modal="true" aria-labelledby="gTitle" id="genForm">' +
-      '<h2 id="gTitle">新创意 · ' + P.name + ' · ' + theme + '</h2><p class="sub">写下想法后，共提供 9 个方案，每批显示 3 个，点击“换一批”继续查看；先核对执行条件再选择。选中后生成标题、封面、' + (p === 'pyq' ? '朋友圈文案' : p === 'xhs' ? '正文' : '分镜和文案') + '，并继续编辑与检查。</p>' +
+      '<h2 id="gTitle">新创意 · ' + P.name + ' · ' + theme + '</h2><p class="sub">写下想法后，每批显示 9 个方案，点击“换一批”继续查看；先核对执行条件再选择。选中后生成标题、封面、' + (p === 'pyq' ? '朋友圈文案' : p === 'xhs' ? '正文' : '分镜和文案') + '，并继续编辑与检查。</p>' +
       '<div class="gen-grid">' +
       '<div class="gfield">你的创意想法<textarea id="gIdea" placeholder="' + esc(IDEA_HINT[theme] || '写一句你想要的创意') + '">' + esc(gen.idea) + '</textarea>' + genBrkChips(p, theme) + '</div>' +
       '<div class="gfield">这次要解决什么' + seg('goal', window.TMB_SERVICE.goals) + '</div>' +
@@ -496,7 +496,7 @@
     var el = document.getElementById('gActs'); if (!el) return;
     var q = quota(), aiBtn = state.ai ? (q.left > 0 ? '<button class="btn" type="button" data-act="genai">用 GPT 生成（剩 ' + q.left + ' 次）</button>' : '<button class="btn" type="button" disabled>GPT 次数用完，' + hhmm(q.reset) + ' 恢复</button>') : '';
     var caseCount = totalCaseCount();
-    el.innerHTML = '<div class="note">已核验适配案例 '+window.TMB_SERVICE.cases().length+' 篇；按目标选择至多4篇参考。先比较方向，再展开。'+(state.ai?' GPT已配置，选定方向后可调用。':' GPT未连接，当前使用本地策划规则。')+'</div><button class="btn accent" type="button" data-act="genlocal">生成三个方向</button>' + '<button class="btn" type="button" data-close>取消</button>';
+    el.innerHTML = '<div class="note">已核验适配案例 '+window.TMB_SERVICE.cases().length+' 篇；按目标选择至多4篇参考。先比较方向，再展开。'+(state.ai?' GPT已配置，选定方向后可调用。':' GPT未连接，当前使用本地策划规则。')+'</div><button class="btn accent" type="button" data-act="genlocal">生成9个方案</button>' + '<button class="btn" type="button" data-close>取消</button>';
   }
   function totalCaseCount() {
     var books = window.TMB_PLAYBOOK || {};
@@ -506,9 +506,9 @@
     var status = document.getElementById('gStatus'), actions = document.getElementById('gActs');
     if (!status || !actions || !genBatches[genBatch]) return;
     var batch = genBatches[genBatch], caseCount = totalCaseCount();
-    status.innerHTML = (gen.goal?'<div class="note">本次匹配 '+window.TMB_SERVICE.search(gen).length+' 篇已核验案例 · 本地规则初稿</div>':'<div class="note">参考：创意库 ' + items().length + ' 条 · 行业案例 ' + caseCount + ' 条</div>')+'<b>第 ' + (genBatch + 1) + ' 批 · 方案 ' + (genBatch * 3 + 1) + '–' + (genBatch * 3 + 3) + ' / 9' + '</b><div class="gen-choices">' + batch.map(function (c, n) { var check = c.generationCheck || {}, audit = (check.distinctFromReferences ? '差异检查通过' : '需复核相似表达') + ' · ' + (check.compliant ? '合规词检查通过' : '含风险词，需修改') + ' · ' + (check.complete ? '结构完整' : '内容待补充'); return '<div class="box"><b>' + esc(c.title) + '</b><p>' + esc(c.brief.hook || c.angle) + '</p><small class="note">创意点：' + esc(c.direction.point) + '</small><small class="note">' + esc(c.execution?'本地策划初稿 · '+c.execution.needs.length+' 项规则待确认 · 效果待测试':audit) + '</small>'+(c.execution?'<p class="note">需要：'+esc(c.execution.assets.join('、'))+'<br>成本项：'+esc(c.execution.costItems.join('、'))+'</p>':'')+'<button type="button" class="btn accent" data-act="genchoose" data-index="' + n + '">用这个方向继续编辑</button>'+(state.ai?'<button type="button" class="btn" data-act="genchosenai" data-index="'+n+'">用 GPT 展开这个方向</button>':'')+'</div>'; }).join('') + '</div>';
+    status.innerHTML = (gen.goal?'<div class="note">本次匹配 '+window.TMB_SERVICE.search(gen).length+' 篇已核验案例 · 本地规则初稿</div>':'<div class="note">参考：创意库 ' + items().length + ' 条 · 行业案例 ' + caseCount + ' 条</div>')+'<b>第 ' + (genBatch + 1) + ' 批 · 方案 ' + (genBatch * 9 + 1) + '–' + (genBatch * 9 + 9) + '</b><div class="gen-choices">' + batch.map(function (c, n) { var check = c.generationCheck || {}, audit = (check.distinctFromReferences ? '差异检查通过' : '需复核相似表达') + ' · ' + (check.compliant ? '合规词检查通过' : '含风险词，需修改') + ' · ' + (check.complete ? '结构完整' : '内容待补充'); return '<div class="box"><b>' + esc(c.title) + '</b><p>' + esc(c.execution?c.execution.steps[1]:(c.brief.hook || c.angle)) + '</p><small class="note">创意点：' + esc(c.direction.point) + '</small><small class="note">' + esc(c.execution?'本地策划初稿 · '+c.execution.needs.length+' 项规则待确认 · 效果待测试':audit) + '</small>'+(c.execution?'<p class="note">需要：'+esc(c.execution.assets.join('、'))+'<br>成本项：'+esc(c.execution.costItems.join('、'))+'</p>':'')+'<button type="button" class="btn accent" data-act="genchoose" data-index="' + n + '">用这个方向继续编辑</button>'+(state.ai?'<button type="button" class="btn" data-act="genchosenai" data-index="'+n+'">用 GPT 展开这个方向</button>':'')+'</div>'; }).join('') + '</div>';
     document.querySelectorAll('#genForm .gen-grid input, #genForm .gen-grid textarea, #genForm .gen-grid select, #genForm .gen-grid [data-g]').forEach(function (x) { x.disabled = true; });
-    actions.innerHTML = '<button class="btn" type="button" data-act="genedit">修改条件</button>'+(genBatch ? '<button class="btn" type="button" data-act="genbatch" data-index="' + (genBatch - 1) + '">上一批</button>' : '') + (genBatch < 2 ? '<button class="btn" type="button" data-act="genbatch" data-index="' + (genBatch + 1) + '">换一批 · 查看另外 3 个</button>' : '') + '<button class="btn" type="button" data-close>取消</button>';
+    actions.innerHTML = '<button class="btn" type="button" data-act="genedit">修改条件</button>'+(genBatch ? '<button class="btn" type="button" data-act="genbatch" data-index="' + (genBatch - 1) + '">上一批</button>' : '') + (genBatch < 2 ? '<button class="btn" type="button" data-act="genbatch" data-index="' + (genBatch + 1) + '">换一批 · 查看另外 9 个</button>' : '') + '<button class="btn" type="button" data-close>取消</button>';
   }
   function makeGenBatch(index) {
     readGen();
@@ -516,11 +516,11 @@
     input.points = (input.points || []).filter(function (p) { return GEN.points.indexOf(p) >= 0; });
     if (GEN.occasions.indexOf(input.occasion) < 0) input.occasion = '常规';
     if (window.TMB_RULES.hasRestrictedPurchase(input.idea)) { var status = document.getElementById('gStatus'); if (status) status.textContent = '这条想法含不允许的仪器购买引导，请改为介绍线下自助服务、流程或已核实的服务价格。'; return; }
-    dirs = GEN.directions(input).slice(index * 3, index * 3 + 3);
+    input.batch = index; dirs = GEN.directions(input).slice(0, 9);
     dirs.forEach(function (direction, n) {
       var draftInput = JSON.parse(JSON.stringify(input)); draftInput.direction = direction;
-      var refs = pool().concat(history, batch), item = GEN.smart(draftInput, index * 3 + n, refs);
-      item.direction = direction; item.input = JSON.parse(JSON.stringify(input)); item.seed = index * 3 + n; batch.push(item);
+      var refs = pool().concat(history, batch), item = GEN.smart(draftInput, index * 9 + n, refs);
+      item.direction = direction; item.input = JSON.parse(JSON.stringify(input)); item.seed = index * 9 + n; batch.push(item);
     });
     genBatch = index; genBatches[index] = batch; genChoices = batch; renderGenChoices();
   }
